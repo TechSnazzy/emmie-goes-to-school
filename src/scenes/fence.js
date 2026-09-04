@@ -24,7 +24,8 @@ export const fence = walkScene({
     });
     const C = {
       world,
-      camW: 320, camH: 300, viewSpan: 300, shadowSpan: 260,
+      roomW: GW, roomH: GH, wallH: 170,
+      camW: GW, camH: GH, shadowSpan: 610,
       staff: { x: GW + 60, y: 168 }, gateOpen: 0,
       puppy: { x: 180, y: 330 },
       locked: (idx) => idx === 0 && C.gateOpen < 0.92,

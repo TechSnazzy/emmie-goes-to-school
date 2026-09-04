@@ -4,7 +4,7 @@ import { input } from '../engine.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
 import { createWorld, interact } from '../world.js';
-import { newRoot, lookAtWorld, snapTo, setViewSpan, setShadowSpan, setSky, setLightLevel, consumeClick, projectToScreen, THREE } from '../render3d.js';
+import { newRoot, lookAtWorld, snapTo, setViewSpan, setRoomBounds, setShadowSpan, setSky, setLightLevel, consumeClick, projectToScreen, THREE } from '../render3d.js';
 import * as M from '../models.js';
 
 export { createWorld, interact, go, setObjective, toast, M, THREE, setLightLevel };
@@ -15,7 +15,9 @@ export function put(obj, x, y, ry = 0) { obj.position.set(x, obj.position.y, y);
 /**
  * build(payload) must return:
  *   { world, root, steps, [tick(dt,t,idx)], [sync(C,t,idx)], [locked(idx,t)],
- *     [viewSpan], [sky], [groundTint], [shadowSpan] }
+ *     [roomW, roomH, wallH] (preferred — fits the camera to the whole room,
+ *     no corner clipping, responsive to any aspect ratio) or [viewSpan]
+ *     (legacy, a flat world-unit span), [sky], [groundTint], [shadowSpan] }
  * Each step: { label?, objective, x, y, hold?, radius?, onDone?, toast? }
  * A step with no x/y is narration: it shows `objective` for `delay` seconds.
  */
@@ -32,7 +34,8 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       C = build(payload) || {};
       C.root = root;
       if (C.build3d) C.build3d(root);
-      setViewSpan(C.viewSpan || 400);
+      if (C.roomW) setRoomBounds(C.roomW, C.roomH, C.wallH || 90);
+      else setViewSpan(C.viewSpan || 400);
       setShadowSpan(C.shadowSpan || 320);
       setSky(C.sky || '#bfe6f2', C.groundTint || '#6b7a5a');
       setLightLevel(C.light === undefined ? 1 : C.light);

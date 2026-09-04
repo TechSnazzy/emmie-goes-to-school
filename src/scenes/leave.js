@@ -28,7 +28,8 @@ export const leave = walkScene({
     });
     const C = {
       world,
-      camW: 300, camH: 300, viewSpan: 285, shadowSpan: 250,
+      roomW: LW, roomH: LH, wallH: 84,
+      camW: LW, camH: LH, shadowSpan: 790,
       dad: { x: 128, y: 326 },
       steps: [
         { label: 'lunchbox', objective: 'Grab your lunchbox from the kitchen', x: 296, y: 96, my: 34, radius: 32, hold: 0.5, toast: 'Lunchbox!', onDone: (c) => { c.lunch.visible = false; c.hasLunch = true; } },

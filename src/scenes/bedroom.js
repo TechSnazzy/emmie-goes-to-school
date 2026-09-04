@@ -36,7 +36,8 @@ export const bedroom = walkScene({
     const milo = { x: 320, y: 300, dir: 'up', tx: 320, ty: 260, pause: 0, mesh: null, anim: 0 };
     const C = {
       world, milo, lightOn: false,
-      camW: 900, camH: 900, viewSpan: 380, shadowSpan: 330, light: 0.5,
+      roomW: RW, roomH: RH, wallH: 82,
+      camW: RW, camH: RH, shadowSpan: 480, light: 0.5,
       sky: '#3b3050', groundTint: '#4a3f58',
       alarmRinging: true, stirring: false, momWalking: false, momT: 0, brushing: false,
       locked: (idx) => idx <= WAKE_IDX,
@@ -78,6 +79,7 @@ export const bedroom = walkScene({
         { objective: 'Brushing… scrub scrub!', delay: 0.3, onDone: (c) => { c.water.visible = false; c.brushing = false; } },
 
         { label: 'shoes + coat', objective: 'Put on your shoes and coat', x: 62, y: 266, radius: 34, hold: 0.7, toast: 'Cozy!' },
+        { label: 'bye Mom', objective: 'Say goodbye to Mom', x: MOM_HOME.x, y: MOM_HOME.y + 30, radius: 40, hold: 0.4, toast: 'Bye Mom, love you!' },
         { objective: 'Out the door to the car  ▶', x: DOOR.x, y: DOOR.y, radius: 36, hold: 0.2 },
       ],
 

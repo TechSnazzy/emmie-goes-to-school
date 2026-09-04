@@ -3,7 +3,7 @@ import { W, H, text, input, rnd, rndi, clamp } from '../engine.js';
 import { state, finishRun, starsFor } from '../state.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
-import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel } from '../render3d.js';
+import { newRoot, snapTo, lookAtWorld, setRoomBounds, setShadowSpan, setSky, setLightLevel } from '../render3d.js';
 import * as M from '../models.js';
 
 let t = 0, stars = 3, shown = 0, cast = null, confetti = [];
@@ -16,7 +16,7 @@ export const end = {
     finishRun();
     stars = starsFor(state.elapsed);
     const root = newRoot();
-    setViewSpan(320); setShadowSpan(240); setSky('#ffdca8', '#6b7a5a'); setLightLevel(1, '#fff0d8');
+    setRoomBounds(460, 340, 130); setShadowSpan(380); setSky('#ffdca8', '#6b7a5a'); setLightLevel(1, '#fff0d8');
 
     root.add(M.makeGround(800, 700, M.C.blacktop, { thick: 30, margin: 700 }));
     const school = M.makeSchool(420, 130, 120); school.position.set(0, 0, -230); root.add(school);

@@ -127,6 +127,13 @@ export const KID_TOPS = [C.orange, C.teal, C.purple, C.yellow, C.coral, '#7fc24a
 export function makeKid(i = 0) {
   return makePerson({ top: KID_TOPS[i % KID_TOPS.length], legs: '#5a6070', hair: i % 2 ? C.hairDark : C.hairBrown }, { kid: true });
 }
+const ADULT_TOPS = [C.teal, '#c97a4a', '#4a7fb5', '#8a5aa0'];
+export function makeAdult(i = 0) {
+  return makePerson({
+    top: ADULT_TOPS[i % ADULT_TOPS.length], legs: i % 2 ? C.denim : '#5a5a6e',
+    hair: i % 3 ? C.hairDark : C.hairSandy, longHair: i % 2 === 0,
+  });
+}
 export function makeEmmie() {
   const g = makePerson(PAL.emmie, { kid: true });
   const pack = box(13, 15, 6, C.purple, 0, 22, -7);
@@ -151,6 +158,17 @@ export function makeCat() {
   const tail = box(2.6, 12, 2.6, C.cat, 0, 8, -9);
   tail.rotation.x = -0.5; g.add(tail);
   g.userData.height = 20;
+  return g;
+}
+export function makeSquirrel() {
+  const g = new THREE.Group();
+  g.add(box(6, 5, 11, C.hairBrown, 0, 4, 0));
+  g.add(box(5, 5, 5, C.hairBrown, 0, 6, 6));
+  g.add(box(2, 1.2, 1, C.ink, 0, 7.4, 8.6));
+  const tail = box(4, 8, 4, C.hairSandy, 0, 6, -8);
+  tail.rotation.x = -0.9;
+  g.add(tail);
+  for (const [dx, dz] of [[-2, 3], [2, 3], [-2, -2], [2, -2]]) g.add(box(1.6, 3.4, 1.6, C.hairBrown, dx, 0, dz));
   return g;
 }
 export function makeDog() {

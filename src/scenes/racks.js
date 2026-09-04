@@ -20,7 +20,8 @@ export const racks = walkScene({
     });
     const C = {
       world,
-      camW: 900, camH: 900, viewSpan: 330, shadowSpan: 280,
+      roomW: RW, roomH: RH, wallH: 96,
+      camW: RW, camH: RH, shadowSpan: 495,
       sky: '#e7dcc6', groundTint: '#8a7f68',
       steps: [
         {

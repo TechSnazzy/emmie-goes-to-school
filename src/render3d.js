@@ -21,7 +21,24 @@ export const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 4000);
 let viewSpan = 420;                       // world units across the short axis
 const camTarget = new THREE.Vector3(0, 0, 0);
 
-export function setViewSpan(v) { viewSpan = v; resize(); }
+let fitMode = false;
+let fitHalfRight = 0, fitHalfUp = 0;
+
+export function setViewSpan(v) { fitMode = false; viewSpan = v; resize(); }
+
+// Fit the camera to a room's full diagonal footprint (world-space w × h,
+// with wall height wallH) so no corner is ever clipped, for whatever the
+// current aspect ratio happens to be. The true-isometric camera's screen
+// axes are ground-diagonals (see ISO/basis below), so a room's floor
+// corners project to a diamond, not a rectangle — the diagonal footprint
+// is (w+h)/√2 wide and (w+h)/2 tall, plus wallH/√2 more height for the
+// tops of the back/left walls.
+export function setRoomBounds(w, h, wallH = 90, margin = 1.08) {
+  fitMode = true;
+  fitHalfRight = (w + h) / (2 * Math.SQRT2) * margin;
+  fitHalfUp = ((w + h) / 4 + wallH / (2 * Math.SQRT2)) * margin;
+  resize();
+}
 export function lookAtWorld(x, y, lerp = 1) {
   camTarget.x += (x - camTarget.x) * lerp;
   camTarget.z += (y - camTarget.z) * lerp;
@@ -74,7 +91,13 @@ function resize() {
   const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
   renderer.setSize(w, h, false);
   const aspect = w / h;
-  const halfH = viewSpan / 2, halfW = halfH * aspect;
+  let halfH, halfW;
+  if (fitMode) {
+    halfH = Math.max(fitHalfUp, fitHalfRight / aspect);
+    halfW = halfH * aspect;
+  } else {
+    halfH = viewSpan / 2; halfW = halfH * aspect;
+  }
   camera.left = -halfW; camera.right = halfW;
   camera.top = halfH; camera.bottom = -halfH;
   camera.updateProjectionMatrix();

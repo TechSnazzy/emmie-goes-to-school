@@ -2,7 +2,7 @@
 import { W, H, ctx, rect, text, input, clamp, circle } from './engine.js';
 import { sfx } from './audio.js';
 
-const PAR = 165;            // seconds of play for a calm, unhurried run
+export const PAR = 165;     // seconds of play for a calm, unhurried run
 export const state = {
   elapsed: 0,
   running: false,

@@ -72,6 +72,13 @@ export const sfx = {
     voice(340, 0.4, { type: 'sine', vol: 0.035, glideTo: 130, delay: 0.06 });
   },
   water() { voice(1400, 0.7, { type: 'sawtooth', vol: 0.018, glideTo: 1000 }); },
+  honk() { voice(220, 0.22, { type: 'sawtooth', vol: 0.1 }); voice(220, 0.22, { type: 'sawtooth', vol: 0.08, delay: 0.26 }); },
+  siren() {
+    for (let i = 0; i < 3; i++) {
+      voice(880, 0.3, { type: 'sine', vol: 0.09, glideTo: 660, delay: i * 0.6 });
+      voice(660, 0.3, { type: 'sine', vol: 0.09, glideTo: 880, delay: i * 0.6 + 0.3 });
+    }
+  },
 };
 
 // --- the calm theme -------------------------------------------------
