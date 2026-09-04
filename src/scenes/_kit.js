@@ -87,6 +87,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
 
       // --- 3D sync ---
       const em = C.world.em;
+      if (globalThis.__dbg) globalThis.__dbg.em = { x: Math.round(em.x), y: Math.round(em.y) };
       emmie.position.set(em.x, 0, em.y);
       M.facePerson(emmie, em.dir);
       M.stepPerson(emmie, em.anim * 1.2, em.moving);

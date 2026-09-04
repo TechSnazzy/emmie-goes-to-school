@@ -12,12 +12,13 @@ export const leave = walkScene({
   endText: 'Buckle up — off to school!  ▶',
   build() {
     const world = createWorld({
-      w: LW, h: LH, start: { x: 90, y: 250 }, speed: 104,
+      w: LW, h: LH, start: { x: 176, y: 300 }, speed: 104,
       solids: [
         { x: 0, y: 0, w: LW, h: 18 },
         { x: 0, y: 0, w: 18, h: LH },
         { x: 0, y: LH - 14, w: LW, h: 14 },
         { x: 60, y: 150, w: 46, h: 100 },        // couch
+        { x: 260, y: 228, w: 80, h: 46 },        // coffee table
         { x: 240, y: 22, w: 110, h: 40 },        // kitchen counter
         { x: 470, y: 40, w: 30, h: 60 },         // tv unit
         { x: HOUSE_X, y: 0, w: 22, h: 150 },     // wall stub by the front door
@@ -28,7 +29,7 @@ export const leave = walkScene({
     const C = {
       world,
       camW: 300, camH: 300, viewSpan: 285, shadowSpan: 250,
-      dad: { x: 40, y: 268 },
+      dad: { x: 128, y: 326 },
       steps: [
         { label: 'lunchbox', objective: 'Grab your lunchbox from the kitchen', x: 296, y: 96, my: 34, radius: 32, hold: 0.5, toast: 'Lunchbox!', onDone: (c) => { c.lunch.visible = false; c.hasLunch = true; } },
         { label: 'get in the car', objective: 'Climb into the white Tesla', x: 900, y: 190, radius: 36, hold: 0.4, toast: 'Ready!' },

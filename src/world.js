@@ -28,10 +28,13 @@ export function createWorld({ w, h, start, solids = [], speed = 96, pad = 10 }) 
       if (Math.abs(vx) > Math.abs(vy)) em.dir = vx > 0 ? 'right' : 'left';
       else em.dir = vy > 0 ? 'down' : 'up';
       const s = em.speed * dt;
+      // If we somehow started inside a solid, let every move through until we
+      // are clear — otherwise the player is trapped with no way out.
+      const stuck = blocked(em.x, em.y);
       const nx = em.x + vx * s;
-      if (!blocked(nx, em.y)) em.x = nx;
+      if (stuck || !blocked(nx, em.y)) em.x = nx;
       const ny = em.y + vy * s;
-      if (!blocked(em.x, ny)) em.y = ny;
+      if (stuck || !blocked(em.x, ny)) em.y = ny;
       if (bounds) { em.x = clamp(em.x, pad, w - pad); em.y = clamp(em.y, pad, h - pad); }
       em.anim += dt * 9;
       stepT += dt;
