@@ -5,6 +5,7 @@ import { resetRun, state } from '../state.js';
 import { go } from '../router.js';
 import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel } from '../render3d.js';
 import * as M from '../models.js';
+import { VERSION } from '../version.js';
 
 let t = 0, cast = null;
 
@@ -46,5 +47,6 @@ export const title = {
     text('Click where Emmie should go — she walks there herself', W / 2, H - 56, { size: 12, align: 'center', color: '#cfc6da', weight: '700' });
     if (t % 1.15 < 0.75) text('click anywhere to start', W / 2, H - 36, { size: 17, align: 'center', color: '#8fe07a', weight: '800' });
     if (state.best) text(`best: ${'★'.repeat(state.best.stars)}${'☆'.repeat(3 - state.best.stars)}`, 14, 12, { size: 13, color: '#7a4a1a', weight: '800' });
+    text(`v${VERSION}`, W - 10, H - 14, { size: 11, align: 'right', color: 'rgba(255,255,255,0.55)', weight: '700', shadow: 'rgba(0,0,0,0.4)' });
   },
 };
