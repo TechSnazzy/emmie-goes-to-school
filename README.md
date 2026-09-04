@@ -2,7 +2,7 @@
 
 A gentle little game for a 7-year-old. It's morning — help Emmie wake up, get
 ready, and walk to class. Walk around with the arrow keys and press **Z** at the
-glowing spot. A yellow arrow always points to the next thing to do.
+glowing ring. A yellow arrow always points to the next thing to do.
 
 **You can't lose.** Emmie always makes it to class — a friendly sun fills up as
 the morning goes, and finishing quickly earns more stars (★★★).
@@ -11,9 +11,9 @@ the morning goes, and finishing quickly earns more stars (★★★).
 
 ## The morning, scene by scene
 
-1. **Getting ready** – wake up, turn on the light, get dressed, go potty, brush
-   teeth, shoes + hoodie. Milo the cat comes to say hi (walk into him for pets).
-2. **Out the door** – grab your lunchbox, then get in the white Tesla.
+1. **Getting ready** – Mom helps: wake up, turn on the light, get dressed, go
+   potty, brush teeth, shoes + coat. Milo the cat comes to say hi.
+2. **Out the door** – grab your lunchbox, then get in the white Tesla. Dad drives.
 3. **Driving** – steer with ◀ ▶. You can't crash — bumping a car just goes "beep beep".
 4. **Through the park** – say hi to the friendly dog, walk to the school gate.
 5. **The gate** – it's locked; wait for a grown-up to open it (pet the puppy while you wait).
@@ -43,19 +43,25 @@ Dev: append `?scene=park` to jump to a scene, `&auto` to autoplay it.
 
 ## How it's built
 
-Plain HTML + ES modules + `<canvas>`, no build step and **no image or audio
-assets** — every sprite is drawn from shapes, and the music/sound is a small
-WebAudio synth. Fixed 640×360 internal resolution, scaled to fill the viewport,
-viewed at a 3/4 top-down angle.
+**Isometric low-poly 3D** with Three.js (vendored, no CDN), no build step and
+**no model or audio files** — every character and prop is assembled in code from
+boxes and low-segment cones, and the music/sound is a small WebAudio synth.
+An orthographic camera sits at a true isometric angle (45° yaw, 35.26° pitch)
+with a directional sun and soft shadows.
+
+The HUD is plain DOM and lives *outside* the 3D viewport — a top bar and a side
+panel — so nothing is ever drawn over the gameplay view.
 
 ```
-index.html          markup + the sound buttons + touch controls
-style.css            fills-the-viewport layout
-src/engine.js        canvas, input, text, loop, math
+index.html           the HUD shell (top bar, view, side panel, touch controls)
+style.css            layout: HUD never overlaps the view
+vendor/three.module.js
+src/render3d.js      isometric camera, lights, shadows, scene root
+src/models.js        the low-poly model library
+src/engine.js        input, loop, math, the 2D overlay used by the screens
 src/audio.js         the calm morning theme + soft sound effects
-src/sprites.js       all the procedural art (people, props, buildings)
-src/world.js         3/4 movement, camera, collision, the guidance arrow
-src/state.js         morning progress, stars, HUD, scene manager
+src/world.js         movement, collision and camera targeting in game-space
+src/state.js         morning progress, stars, DOM HUD, scene manager
 src/router.js        scene registry (keeps scenes decoupled)
 src/scenes/          one file per scene (+ _kit.js shared plumbing)
 src/main.js          wires it together
