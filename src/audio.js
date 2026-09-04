@@ -61,6 +61,17 @@ export const sfx = {
   beep() { voice(660, 0.1, { type: 'square', vol: 0.05 }); },
   star() { voice(880, 0.12, { type: 'sine', vol: 0.12 }); voice(1320, 0.16, { type: 'sine', vol: 0.1, delay: 0.09 }); },
   win() { [523, 587, 659, 784, 880, 1047].forEach((f, i) => voice(f, 0.24, { type: 'sine', vol: 0.12, delay: i * 0.12 })); },
+  alarm() {
+    for (let i = 0; i < 4; i++) {
+      voice(880, 0.12, { type: 'square', vol: 0.11, delay: i * 0.32 });
+      voice(700, 0.12, { type: 'square', vol: 0.09, delay: i * 0.32 + 0.16 });
+    }
+  },
+  flush() {
+    voice(260, 0.55, { type: 'sawtooth', vol: 0.055, glideTo: 85 });
+    voice(340, 0.4, { type: 'sine', vol: 0.035, glideTo: 130, delay: 0.06 });
+  },
+  water() { voice(1400, 0.7, { type: 'sawtooth', vol: 0.018, glideTo: 1000 }); },
 };
 
 // --- the calm theme -------------------------------------------------

@@ -280,6 +280,19 @@ export function makeNightstand() {
   g.add(cone(9, 12, C.yellow, 0, 32, 0, 7));
   return g;
 }
+export function makeAlarmClock() {
+  const g = new THREE.Group();
+  g.add(box(11, 9, 8, '#f6f4f0', 0, 0, 0));                  // body
+  g.add(box(8, 6, 0.6, C.ink, 0, 1.5, 4.1));                 // face
+  g.add(box(0.8, 3, 0.6, C.ink, 0, 3.4, 4.3));               // hour hand
+  g.add(box(0.8, 2, 0.6, C.ink, 1.3, 3, 4.3));                // minute hand
+  const bell = (dx) => { const b = box(4.4, 4.4, 4.4, '#c7c2b6', dx, 8.5, 0); return b; };
+  const bellL = bell(-4.2), bellR = bell(4.2);
+  g.add(bellL, bellR, box(1.6, 2.4, 1.6, '#c7c2b6', 0, 8.6, 0));
+  for (const [dx, dz] of [[-4, -3], [4, -3], [-4, 3], [4, 3]]) g.add(box(1.4, 1.4, 1.4, C.metalD, dx, 0, dz));
+  g.userData = { bellL, bellR };
+  return g;
+}
 export function makeRug(w, d, colour = C.coral) {
   const g = new THREE.Group();
   const a = box(w, 1.2, d, colour, 0, 0, 0); a.castShadow = false; g.add(a);
