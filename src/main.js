@@ -1,10 +1,11 @@
 // main.js — wire scenes together and run the loop.
-import { W, H, ctx, startLoop, initTouch } from './engine.js';
+import { startLoop, initTouch, clearOverlay } from './engine.js';
 import { settings, toggleMusic, toggleSfx } from './audio.js';
 import {
-  state, resetRun, makeStory, updateSceneManager, currentScene,
-  goScene, drawFade, drawHUD, drawToasts, updateToasts,
+  state, makeStory, updateSceneManager, currentScene,
+  goScene, drawFade, syncHUD, updateToasts, setScreenMode,
 } from './state.js';
+import { render } from './render3d.js';
 import { register, go } from './router.js';
 
 import { title } from './scenes/title.js';
@@ -19,12 +20,11 @@ import { line } from './scenes/line.js';
 import { end } from './scenes/end.js';
 
 window.__dbg = { frames: 0, scene: '' };
-
 initTouch();
 
 const intro = makeStory([
   ['Emmie Goes to School', "It's 6:50 in the morning."],
-  ['Walk with the ARROW KEYS.', 'Press  Z  at the glowing spot.'],
+  ['Walk with the ARROW KEYS.', 'Press  Z  at the glowing ring.'],
   ['A yellow arrow always points', 'to the next thing to do.'],
   ['Mom helps Emmie get ready,', 'then Dad walks her to school.'],
 ], () => go('bedroom'));
@@ -33,9 +33,6 @@ const intro = makeStory([
 ['park', park], ['fence', fence], ['hallway', hallway], ['racks', racks], ['line', line], ['end', end]]
   .forEach(([n, s]) => register(n, s));
 
-const NO_HUD = new Set(['title', 'story', 'end']);
-
-// music / sfx buttons in the page
 function wireButton(id, get, set) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -46,25 +43,25 @@ function wireButton(id, get, set) {
 wireButton('btn-music', () => settings.music, toggleMusic);
 wireButton('btn-sfx', () => settings.sfx, toggleSfx);
 
-// dev helper: ?scene=bedroom jumps straight in; add &auto to autoplay
+// dev helper: ?scene=park jumps straight in, &auto autoplays
 const params = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
-const startAt = params.get('scene');
 if (params.has('auto')) globalThis.__EMMIE_AUTOPLAY = true;
-if (startAt && startAt !== 'title') { state.parent = params.get('parent') === 'MOM' ? 'MOM' : 'DAD'; go(startAt); }
-else goScene(title);
+const startAt = params.get('scene');
+if (startAt && startAt !== 'title') go(startAt); else goScene(title);
 
 startLoop((dt) => {
   updateSceneManager(dt);
   const s = currentScene();
-  window.__dbg.frames++; window.__dbg.scene = s && s.id || '';
+  window.__dbg.frames++; window.__dbg.scene = (s && s.id) || '';
   if (s && s.update) s.update(dt);
   updateToasts(dt);
+  syncHUD();
+  setScreenMode(!!(s && s.screen));
 
-  ctx.clearRect(0, 0, W, H);
+  render();
+  clearOverlay();
   if (s && s.draw) s.draw();
-  if (s && !NO_HUD.has(s.id)) drawHUD();
-  drawToasts();
   drawFade();
 });
 
-void resetRun;
+void state;

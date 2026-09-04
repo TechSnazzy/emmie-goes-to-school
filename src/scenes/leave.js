@@ -1,10 +1,9 @@
 // leave.js — through the house, grab the lunchbox, out to the white Tesla.
-import { W, H, rect, rr, text, lerp } from '../engine.js';
-import { walkScene, createWorld, painter } from './_kit.js';
-import { state } from '../state.js';
-import * as S from '../sprites.js';
+import { lerp } from '../engine.js';
+import { walkScene, createWorld, put, M } from './_kit.js';
 
-const LW = 1180, LH = 340;
+const LW = 1120, LH = 380;
+const HOUSE_X = 620;
 
 export const leave = walkScene({
   id: 'leave',
@@ -13,61 +12,78 @@ export const leave = walkScene({
   endText: 'Buckle up — off to school!  ▶',
   build() {
     const world = createWorld({
-      w: LW, h: LH, start: { x: 70, y: 230 }, speed: 100,
+      w: LW, h: LH, start: { x: 90, y: 250 }, speed: 104,
       solids: [
-        { x: 0, y: 0, w: LW, h: 92 },              // back wall / house edge
-        { x: 40, y: 150, w: 120, h: 46 },          // couch
-        { x: 250, y: 96, w: 130, h: 30 },          // kitchen counter
-        { x: 0, y: LH - 8, w: 700, h: 8 },         // house bottom wall
-        { x: 640, y: 96, w: 20, h: 180 },          // doorway post
-        { x: 0, y: 0, w: 16, h: LH },
-        { x: 760, y: LH - 8, w: LW, h: 8 },
-        { x: 980, y: 150, w: 90, h: 40 },          // the Tesla
+        { x: 0, y: 0, w: LW, h: 18 },
+        { x: 0, y: 0, w: 18, h: LH },
+        { x: 0, y: LH - 14, w: LW, h: 14 },
+        { x: 60, y: 150, w: 46, h: 100 },        // couch
+        { x: 240, y: 22, w: 110, h: 40 },        // kitchen counter
+        { x: 470, y: 40, w: 30, h: 60 },         // tv unit
+        { x: HOUSE_X, y: 0, w: 22, h: 150 },     // wall stub by the front door
+        { x: HOUSE_X, y: 250, w: 22, h: 130 },
+        { x: 930, y: 130, w: 110, h: 110 },      // the car
       ],
     });
     const C = {
       world,
-      parent: { x: 40, y: 240 },
+      camW: 300, camH: 300, viewSpan: 285, shadowSpan: 250,
+      dad: { x: 40, y: 268 },
       steps: [
-        { label: 'lunchbox', objective: 'Grab your lunchbox from the kitchen', x: 315, y: 132, radius: 30, hold: 0.5, toast: 'Lunchbox!', onDone: (c) => { c.hasLunch = true; } },
-        { label: 'get in the car', objective: 'Climb into the white Tesla', x: 1000, y: 196, radius: 34, hold: 0.4, toast: 'Ready!' },
+        { label: 'lunchbox', objective: 'Grab your lunchbox from the kitchen', x: 296, y: 96, my: 34, radius: 32, hold: 0.5, toast: 'Lunchbox!', onDone: (c) => { c.lunch.visible = false; c.hasLunch = true; } },
+        { label: 'get in the car', objective: 'Climb into the white Tesla', x: 900, y: 190, radius: 36, hold: 0.4, toast: 'Ready!' },
       ],
+      build3d(root) {
+        // house floor + walls
+        root.add(put(M.makeGround(HOUSE_X, LH, M.C.wood), HOUSE_X / 2, LH / 2));
+        root.add(put(M.makeWall(HOUSE_X, 84, 16, M.C.wall), HOUSE_X / 2, 8));
+        root.add(put(M.makeWall(16, 84, LH, M.C.wallD), 8, LH / 2));
+        root.add(put(M.makeWall(20, 84, 150, M.C.wall), HOUSE_X + 10, 74));
+        root.add(put(M.makeWall(20, 84, 130, M.C.wall), HOUSE_X + 10, 315));
+        root.add(put(M.makeDoorway(52), HOUSE_X + 10, 200, Math.PI / 2));
+
+        // outside: lawn + driveway
+        root.add(put(M.makeGround(LW - HOUSE_X, LH, M.C.grass, { margin: 500 }), HOUSE_X + (LW - HOUSE_X) / 2, LH / 2));
+        root.add(put(M.makeSlab(340, 210, '#b9bec6', 3), 900, 190));
+
+        root.add(put(M.makeWindow(), 140, 12));
+        root.add(put(M.makeCouch(), 84, 200, Math.PI / 2));
+        root.add(put(M.makeTV(), 486, 70, -Math.PI / 2));
+        root.add(put(M.makeTable(80, 46), 300, 250));
+        root.add(put(M.makeCounter(120), 296, 42));
+        root.add(put(M.makeRug(180, 120, '#c98fb0'), 240, 210));
+
+        const lunch = put(M.makeLunchbox(), 296, 44);
+        lunch.position.y = 34;
+        C.lunch = lunch;
+        root.add(lunch);
+
+        root.add(put(M.makeTree(1.1), 720, 60));
+        root.add(put(M.makeTree(0.9), 1060, 300));
+        root.add(put(M.makeBush(), 700, 300));
+        root.add(put(M.makeMailbox(), 1080, 120));
+
+        const car = M.makeCar(M.C.car, { tesla: true });
+        put(car, 980, 185, Math.PI / 2);
+        root.add(car);
+
+        const dad = M.makePerson(M.PAL.dad);
+        put(dad, C.dad.x, C.dad.y);
+        C.dadMesh = dad;
+        root.add(dad);
+      },
       tick(dt) {
-        C.parent.x = lerp(C.parent.x, world.em.x - 26, Math.min(1, dt * 3));
-        C.parent.y = lerp(C.parent.y, world.em.y + 6, Math.min(1, dt * 3));
+        const em = world.em;
+        C.dad.x = lerp(C.dad.x, em.x - 34, Math.min(1, dt * 2.6));
+        C.dad.y = lerp(C.dad.y, em.y + 16, Math.min(1, dt * 2.6));
+        const d = C.dadMesh;
+        const mv = Math.hypot(em.x - 34 - C.dad.x, em.y + 16 - C.dad.y) > 3;
+        d.position.set(C.dad.x, 0, C.dad.y);
+        d.rotation.y = Math.atan2(em.x - C.dad.x, em.y - C.dad.y);
+        M.stepPerson(d, em.anim * 1.2, mv || em.moving);
+        if (C.hasLunch && C.emmie.userData.pack) C.emmie.userData.pack.visible = true;
       },
     };
     return C;
-  },
-  drawScene(C, t, idx) {
-    const wd = C.world, SX = wd.sx, SY = wd.sy;
-    const p = painter();
-    p.bg(() => {
-      rect(0, 0, W, H, '#9ec9e8');
-      // house interior
-      rr(SX(-4), SY(-6), 704, LH, 4, S.PAL.wall);
-      rr(SX(-4), SY(84), 704, 8, 0, S.PAL.wallD);
-      rr(SX(20), SY(96), 620, LH - 108, 6, '#c79c72');
-      // driveway
-      rr(SX(700), SY(60), LW - 700, LH - 60, 4, '#8f9498');
-      rr(SX(700), SY(54), LW - 700, 8, 2, S.PAL.grassD);
-      for (let gx = 720; gx < LW; gx += 60) rect(SX(gx), SY(80), 2, LH - 100, 'rgba(255,255,255,0.4)');
-      // lawn strip
-      rr(SX(660), SY(300), LW, 60, 0, S.PAL.grass);
-    });
-    p.add(90, () => S.drawWindow(SX(120), SY(88), 54));
-    p.add(126, () => { S.drawTable(SX(315), SY(126), 120); if (!C.hasLunch) S.drawLunchbox(SX(330), SY(122)); });
-    p.add(150, () => S.drawTV(SX(500), SY(150)));
-    p.add(196, () => S.drawCouch(SX(100), SY(196)));
-    p.add(150, () => S.drawTable(SX(300), SY(224), 50));
-    p.add(130, () => S.drawDoor(SX(650), SY(150), 40, true));
-    p.add(70, () => S.drawTree(SX(760), SY(84), 1.0));
-    p.add(72, () => S.drawMailbox(SX(1120), SY(300)));
-    p.add(190, () => S.drawTesla(SX(1000), SY(200), { dir: 'left' }));
-    p.add(C.parent.y, () => S.drawParentBy(state.parent, SX(C.parent.x), SY(C.parent.y), { dir: 'right', anim: t * 5, moving: true }));
-    p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: '#7b3ff2' }));
-    p.flush();
-    text('☀ It is 7:20 — time to go!', W / 2, H - 26, { size: 11, align: 'center', color: '#2a3a4a', weight: '700' });
-    void idx;
   },
 });

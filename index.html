@@ -9,16 +9,40 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8E%92%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="stage">
-  <canvas id="screen" width="640" height="360"></canvas>
+<div id="app">
 
-  <div id="audiobtns">
-    <button id="btn-music" data-icon="♪ music" title="Music on/off (M)">♪ music</button>
-    <button id="btn-sfx" data-icon="🔊 sounds" title="Sounds on/off (N)">🔊 sounds</button>
+  <!-- top bar: never overlaps the 3D view -->
+  <header id="topbar">
+    <div id="sun">
+      <span class="sun-dot">☀</span>
+      <div class="bar"><div id="sunfill"></div></div>
+      <span class="lbl">morning</span>
+    </div>
+    <div id="obj"></div>
+    <div id="audiobtns">
+      <button id="btn-music" data-icon="♪ music">♪ music</button>
+      <button id="btn-sfx" data-icon="🔊 sounds">🔊 sounds</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <!-- the whole 3D gameplay view, nothing drawn on top of it -->
+    <div id="view">
+      <canvas id="view3d"></canvas>
+      <canvas id="ui" width="640" height="360"></canvas>
+      <div id="toast"></div>
+    </div>
+
+    <!-- the checklist lives beside the view, never over it -->
+    <aside id="panel">
+      <h3 id="panel-title">Getting Ready</h3>
+      <ul id="panel-list"></ul>
+      <p id="panel-hint">Arrow keys to walk<br />Z at the glowing ring</p>
+    </aside>
   </div>
 
   <div id="touch" hidden>
@@ -37,7 +61,7 @@
 <script>
 window.addEventListener('error', (e) => {
   const d = document.createElement('pre');
-  d.style.cssText = 'position:fixed;inset:0;margin:0;padding:12px;color:#fff;background:#711;font:12px/1.5 monospace;white-space:pre-wrap;z-index:99';
+  d.style.cssText = 'position:fixed;inset:0;margin:0;padding:12px;color:#fff;background:#711;font:12px/1.5 monospace;white-space:pre-wrap;z-index:99;overflow:auto';
   d.textContent = 'ERROR: ' + e.message + '\n' + (e.filename || '') + ':' + e.lineno + '\n\n' + ((e.error && e.error.stack) || '');
   document.body.appendChild(d);
 });

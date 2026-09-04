@@ -1,13 +1,10 @@
-// fence.js — the school gate is closed. Wait for a grown-up to open it, then
-// walk through. (Pet the puppy while you wait!)
-import { W, H, rect, rr, text, lerp } from '../engine.js';
-import { walkScene, createWorld, painter } from './_kit.js';
+// fence.js — the gate is closed. Wait for a grown-up to open it, then walk through.
+import { lerp } from '../engine.js';
+import { walkScene, createWorld, put, M } from './_kit.js';
 import { sfx } from '../audio.js';
-import { state } from '../state.js';
-import * as S from '../sprites.js';
 
-const GW = 720, GH = 340;
-const GATE = { x: 380, y: 210 };
+const GW = 760, GH = 400;
+const GATE = { x: 400, y: 210 };
 
 export const fence = walkScene({
   id: 'fence',
@@ -16,62 +13,90 @@ export const fence = walkScene({
   endText: 'Into the school  ▶',
   build() {
     const world = createWorld({
-      w: GW, h: GH, start: { x: 60, y: 250 }, speed: 100,
+      w: GW, h: GH, start: { x: 90, y: 300 }, speed: 104,
       solids: [
         { x: 0, y: 0, w: GW, h: 150 },
-        { x: 0, y: 322, w: GW, h: 18 },
-        { x: 150, y: 176, w: 210, h: 8 },       // closed gate rail (removed when open)
-        { x: 420, y: 150, w: GW, h: 60 },       // fence right of gate
+        { x: 0, y: GH - 16, w: GW, h: 16 },
+        { x: 150, y: 196, w: 210, h: 12 },        // the closed gate rail
+        { x: 440, y: 196, w: GW, h: 12 },
+        { x: 0, y: 196, w: 150, h: 12 },
       ],
     });
     const C = {
-      world, staff: { x: GW + 40, y: 150 }, gateOpen: 0, puppy: { x: 120, y: 285, wag: 0, pet: 0 },
-      locked: (idx) => idx === 0 && C.gateOpen < 0.9,
+      world,
+      camW: 320, camH: 300, viewSpan: 300, shadowSpan: 260,
+      staff: { x: GW + 60, y: 168 }, gateOpen: 0,
+      puppy: { x: 180, y: 330 },
+      locked: (idx) => idx === 0 && C.gateOpen < 0.92,
       steps: [
         {
           label: 'wait for the gate', objective: 'The gate is locked — wait for a grown-up',
-          x: undefined, delay: 3.2,
-          onDone: () => { world.setSolids([{ x: 0, y: 0, w: GW, h: 150 }, { x: 0, y: 322, w: GW, h: 18 }, { x: 420, y: 150, w: GW, h: 60 }]); },
+          delay: 3.4,
+          onDone: () => world.setSolids([
+            { x: 0, y: 0, w: GW, h: 150 }, { x: 0, y: GH - 16, w: GW, h: 16 },
+            { x: 440, y: 196, w: GW, h: 12 }, { x: 0, y: 196, w: 150, h: 12 },
+          ]),
         },
-        { label: 'walk through', objective: 'Walk through the open gate  ▶', x: GATE.x, y: 250, radius: 40, hold: 0.2, toast: 'Good morning!' },
+        { label: 'walk through', objective: 'Walk through the open gate  ▶', x: GATE.x, y: 150, radius: 40, hold: 0.2, toast: 'Good morning!' },
       ],
+      build3d(root) {
+        root.add(put(M.makeGround(GW, GH, M.C.grass, { margin: 800 }), GW / 2, GH / 2));
+        root.add(put(M.makeSlab(GW, 74, '#c9c6cf', 3), GW / 2, 268));
+        root.add(put(M.makeSlab(320, 130, M.C.blacktop, 3), GATE.x, 110));
+
+        root.add(put(M.makeSchool(430, 170, 150), 330, 40));
+        root.add(put(M.makeFlagpole(), 70, 90));
+        root.add(put(M.makeBush(), 620, 120));
+        root.add(put(M.makeBush(0.8), 120, 130));
+
+        for (let x = -10; x < 150; x += 46) root.add(put(M.makeFence(46), x, 200));
+        for (let x = 444; x < GW + 40; x += 46) root.add(put(M.makeFence(46), x, 200));
+        const gate = M.makeGate();
+        put(gate, 154, 200);
+        C.gate = gate;
+        root.add(gate);
+
+        const dog = M.makeDog();
+        put(dog, C.puppy.x, C.puppy.y, Math.PI / 2);
+        dog.scale.setScalar(0.7);
+        root.add(dog);
+
+        const teach = M.makePerson(M.PAL.teacher);
+        put(teach, C.staff.x, C.staff.y);
+        C.staffMesh = teach;
+        root.add(teach);
+
+        const dad = M.makePerson(M.PAL.dad);
+        put(dad, 54, 316);
+        C.dadMesh = dad;
+        root.add(dad);
+      },
       tick(dt, t, idx) {
-        C.puppy.wag += dt * 12;
-        if (C.puppy.pet > 0) C.puppy.pet -= dt;
-        if (Math.hypot(C.puppy.x - world.em.x, C.puppy.y - world.em.y) < 26 && (!C._pT || C._pT > 0.7)) { C._pT = 0; C.puppy.pet = 1; sfx.purr(); }
-        C._pT = (C._pT || 0) + dt;
-        // staff walks over and opens the gate during step 0
+        const em = world.em;
         if (idx === 0) {
-          C.staff.x = lerp(C.staff.x, GATE.x + 60, Math.min(1, dt * 1.4));
-          if (C.staff.x < GATE.x + 90) { C.gateOpen = Math.min(1, C.gateOpen + dt * 1.1); if (C.gateOpen > 0.02 && C.gateOpen < 0.1) sfx.knock(); }
+          C.staff.x = lerp(C.staff.x, GATE.x + 90, Math.min(1, dt * 1.5));
+          if (C.staff.x < GATE.x + 150) {
+            const before = C.gateOpen;
+            C.gateOpen = Math.min(1, C.gateOpen + dt * 0.85);
+            if (before === 0) sfx.knock();
+          }
         } else {
-          C.staff.x = lerp(C.staff.x, GATE.x + 100, Math.min(1, dt * 1.2));
+          C.staff.x = lerp(C.staff.x, GATE.x + 120, Math.min(1, dt * 1.2));
         }
+        if (C.gate) C.gate.userData.leaf.rotation.y = -C.gateOpen * 1.7;
+        const s = C.staffMesh;
+        s.position.set(C.staff.x, 0, C.staff.y);
+        s.rotation.y = -Math.PI / 2;
+        M.stepPerson(s, t * 6, C.staff.x > GATE.x + 155);
+
+        const d = C.dadMesh;
+        const tx = em.x - 36, ty = em.y + 18;
+        d.position.x = lerp(d.position.x, tx, Math.min(1, dt * 2.6));
+        d.position.z = lerp(d.position.z, ty, Math.min(1, dt * 2.6));
+        d.rotation.y = Math.atan2(em.x - d.position.x, em.y - d.position.z);
+        M.stepPerson(d, em.anim * 1.2, em.moving);
       },
     };
     return C;
-  },
-  drawScene(C, t, idx) {
-    const wd = C.world, SX = wd.sx, SY = wd.sy;
-    const p = painter();
-    p.bg(() => {
-      rect(0, 0, W, H, '#bfe3f2');
-      S.ground("grass", wd.cam.x, wd.cam.y, W, H);
-      rr(SX(-20), SY(228), GW + 40, 60, 0, '#c3c8cc');    // sidewalk to gate
-    });
-    p.add(120, () => { S.drawSchoolBuilding(SX(120), SY(150), 460, 120); });
-    p.add(118, () => S.drawFlagpole(SX(70), SY(150)));
-    p.add(150, () => { for (let fx = -10; fx < 150; fx += 44) S.drawFence(SX(fx), SY(184), 44); });
-    p.add(150, () => { for (let fx = 420; fx < GW + 20; fx += 44) S.drawFence(SX(fx), SY(184), 44); });
-    p.add(151, () => S.drawGate(SX(GATE.x - 40), SY(184), C.gateOpen));
-    p.add(150, () => S.drawBush(SX(300), SY(150)));
-    p.add(C.puppy.y, () => S.drawDog(SX(C.puppy.x), SY(C.puppy.y), { dir: 'right' }));
-    p.add(C.staff.y + 40, () => S.drawTeacher(SX(C.staff.x), SY(C.staff.y + 40), { dir: 'left', anim: t * 4, moving: idx === 0 && C.staff.x > GATE.x + 62 }));
-    p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: '#7b3ff2' }));
-    p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 26), SY(wd.em.y + 8), { dir: 'right', anim: t * 3, moving: wd.em.moving }));
-    p.flush();
-
-    if (C.puppy.pet > 0) text('♥', SX(C.puppy.x), SY(C.puppy.y - 22 - (1 - C.puppy.pet) * 12), { size: 12, align: 'center', color: '#ff6ea8' });
-    if (idx === 0) text('Pet the puppy while you wait 🐶', W / 2, H - 26, { size: 11, align: 'center', color: '#2a3a4a', weight: '700' });
   },
 });

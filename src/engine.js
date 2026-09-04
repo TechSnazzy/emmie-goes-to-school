@@ -2,22 +2,14 @@
 export const W = 640;
 export const H = 360;
 
-export const canvas = document.getElementById('screen');
+// 2D overlay canvas — used only for the title / story / end screens.
+// The gameplay view underneath it is the WebGL canvas and is never drawn over.
+export const canvas = document.getElementById('ui');
 export const ctx = canvas.getContext('2d');
 canvas.width = W;
 canvas.height = H;
-ctx.imageSmoothingEnabled = false;
 
-// --- viewport-fill scaling (keep 16:9, letterbox the remainder) -----------
-function resize() {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const scale = Math.min(vw / W, vh / H);
-  canvas.style.width = Math.round(W * scale) + 'px';
-  canvas.style.height = Math.round(H * scale) + 'px';
-  ctx.imageSmoothingEnabled = false;
-}
-window.addEventListener('resize', resize);
-resize();
+export function clearOverlay() { ctx.clearRect(0, 0, W, H); }
 
 // --- input: keyboard + on-screen buttons -> logical actions ---------------
 const KEYMAP = {

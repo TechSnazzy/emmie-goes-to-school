@@ -1,69 +1,83 @@
-// drive.js — a gentle top-down drive to the park. You can't crash; bumping a
-// car just goes "beep beep". Steer with the arrow keys.
-import { W, H, ctx, rect, rr, text, clamp, rnd, chance, input } from '../engine.js';
+// drive.js — a gentle drive to the park. You can't crash; a bump just beeps.
+import { input, clamp, rnd, rndi, chance } from '../engine.js';
 import { state, tickProgress, setScene, setObjective, toast } from '../state.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
-import * as S from '../sprites.js';
+import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel, THREE } from '../render3d.js';
+import * as M from '../models.js';
 
-const ROAD_X = 150, ROAD_W = 340;
-const GOAL = 100;
+const ROAD_W = 260;
+const LENGTH = 2600;           // world units of road
+const SPEED = LENGTH / 15;     // ~15 second drive
 
-let t, carX, carScreenY, dist, cars, scroll, msgT, beepCd;
-
-function reset() {
-  t = 0; carX = W / 2; carScreenY = H - 90; dist = 0; cars = []; scroll = 0; msgT = 0; beepCd = 0;
-  setScene('Driving to School', [{ label: 'reach the park', done: false }]);
-}
+let car, cars, root, dist, x, t, beepCd, msgT;
 
 export const drive = {
   id: 'drive',
-  enter() { reset(); state.running = true; sfx.car(); },
+  enter() {
+    root = newRoot();
+    t = 0; dist = 0; x = 0; beepCd = 0; msgT = 0; cars = [];
+    setViewSpan(330); setShadowSpan(300); setSky('#bfe6f2', '#6b7a5a'); setLightLevel(1);
+    setScene('Driving to School', [{ label: 'reach the park', done: false }]);
+    state.running = true;
+    sfx.car();
+
+    // ground + road running along -Z
+    root.add(M.box(1600, 12, LENGTH + 600, M.C.grass, 0, -12, -LENGTH / 2));
+    root.add(M.box(ROAD_W, 4, LENGTH + 600, M.C.road, 0, 0, -LENGTH / 2));
+    root.add(M.box(6, 5, LENGTH + 600, '#e6e3ec', -ROAD_W / 2 + 4, 0, -LENGTH / 2));
+    root.add(M.box(6, 5, LENGTH + 600, '#e6e3ec', ROAD_W / 2 - 4, 0, -LENGTH / 2));
+    for (let z = 60; z > -LENGTH - 200; z -= 70) {
+      root.add(M.box(6, 5, 34, M.C.line, -ROAD_W / 6, 0, z));
+      root.add(M.box(6, 5, 34, M.C.line, ROAD_W / 6, 0, z));
+    }
+    for (let z = 0; z > -LENGTH - 200; z -= 150) {
+      root.add(place(M.makeTree(0.9 + Math.random() * 0.4), -ROAD_W / 2 - rnd(60, 150), z));
+      root.add(place(M.makeTree(0.9 + Math.random() * 0.4), ROAD_W / 2 + rnd(60, 150), z - 70));
+      if (chance(0.4)) root.add(place(M.makeBush(), -ROAD_W / 2 - 40, z - 40));
+    }
+
+    car = M.makeCar(M.C.car, { tesla: true });
+    root.add(car);
+    snapTo(0, 0);
+  },
+
   update(dt) {
-    t += dt; tickProgress(dt); msgT += dt; beepCd -= dt;
+    t += dt; tickProgress(dt); beepCd -= dt; msgT += dt;
     setObjective('Drive to the park — steer with ◀ ▶');
-    dist += dt * (GOAL / 15);
-    scroll = (scroll + dt * 150) % 48;
+    dist += SPEED * dt;
+    const z = -dist;
 
-    const spd = 150;
-    if (input.down('left')) carX -= spd * dt;
-    if (input.down('right')) carX += spd * dt;
-    carX = clamp(carX, ROAD_X + 24, ROAD_X + ROAD_W - 24);
+    const steer = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
+    x = clamp(x + steer * 150 * dt, -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
+    car.position.set(x, 0, z);
+    car.rotation.z = -steer * 0.05;
 
-    if (chance(dt * 1.1) && cars.length < 4) {
-      const lane = ROAD_X + 50 + rnd(0, ROAD_W - 100);
-      cars.push({ x: lane, y: -60, v: rnd(38, 70), c: ['#c94f4f', '#4f7fc9', '#e0b24d', '#5aa66a'][(Math.random() * 4) | 0] });
+    // traffic ahead, drifting toward us
+    if (chance(dt * 1.3) && cars.length < 5) {
+      const m = M.makeCar([M.C.coral, '#4f7fc9', M.C.yellow, '#5aa66a', '#a06ac8'][rndi(0, 5)]);
+      const lane = rnd(-ROAD_W / 2 + 34, ROAD_W / 2 - 34);
+      m.position.set(lane, 0, z - 620);
+      m.rotation.y = Math.PI;
+      root.add(m);
+      cars.push({ m, v: rnd(50, 95) });
     }
-    for (const c of cars) {
-      c.y += (c.v + dist * 0.3) * dt;
-      if (beepCd <= 0 && Math.abs(c.x - carX) < 34 && Math.abs(c.y - carScreenY) < 46) {
-        beepCd = 1.2; sfx.beep(); toast('beep beep!', '#ffe066');
-        carX += carX < c.x ? -20 : 20;
-        carX = clamp(carX, ROAD_X + 24, ROAD_X + ROAD_W - 24);
+    for (let i = cars.length - 1; i >= 0; i--) {
+      const c = cars[i];
+      c.m.position.z += (SPEED * 0.55 + c.v) * dt;
+      if (beepCd <= 0 && Math.abs(c.m.position.x - x) < 46 && Math.abs(c.m.position.z - z) < 92) {
+        beepCd = 1.3; sfx.beep(); toast('beep beep!');
+        x = clamp(x + (x < c.m.position.x ? -34 : 34), -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
       }
+      if (c.m.position.z > z + 260) { root.remove(c.m); cars.splice(i, 1); }
     }
-    for (let i = cars.length - 1; i >= 0; i--) if (cars[i].y > H + 60) cars.splice(i, 1);
 
-    if (dist >= GOAL) { toast('We are here!', '#8fe07a'); go('park'); }
+    lookAtWorld(x * 0.35, z, Math.min(1, dt * 5));
+    if (dist >= LENGTH) { toast('We are here!'); go('park'); }
   },
-  draw() {
-    rect(0, 0, W, H, S.PAL.grass);
-    for (let i = 0; i < 12; i++) rect((i * 90 + (scroll * 3 | 0)) % W, (i * 57) % H, 3, 6, S.PAL.grassD);
-    // road
-    rr(ROAD_X, -10, ROAD_W, H + 20, 0, '#42474e');
-    rect(ROAD_X - 6, 0, 6, H, '#dfe3e8'); rect(ROAD_X + ROAD_W, 0, 6, H, '#dfe3e8');
-    for (let y = -48; y < H; y += 48) { rect(ROAD_X + ROAD_W / 3 - 3, y + scroll, 5, 26, '#f2d24d'); rect(ROAD_X + ROAD_W * 2 / 3 - 3, y + scroll, 5, 26, '#f2d24d'); }
-    // roadside
-    S.drawTree(ROAD_X - 60, (60 + scroll * 4) % (H + 120), 0.8);
-    S.drawTree(ROAD_X + ROAD_W + 70, (200 + scroll * 4) % (H + 120), 0.9);
 
-    for (const c of cars) S.drawCar(c.x, c.y, c.c, { dir: 'down' });
-    S.drawTesla(carX, carScreenY, { dir: 'up' });
-
-    // progress
-    rr(20, H / 2 - 70, 10, 140, 5, 'rgba(0,0,0,0.3)');
-    rr(20, H / 2 - 70 + 140 * (1 - clamp(dist / GOAL, 0, 1)), 10, 8, 4, '#8fe07a');
-    text('PARK', 14, H / 2 + 74, { size: 9, color: '#2a3a2a', weight: '700' });
-    if (msgT < 3) text('Hold ◀ or ▶ to steer. You can\'t crash — have fun!', W / 2, H - 24, { size: 11, align: 'center', color: '#fff', weight: '700' });
-  },
+  draw() { /* no 2D overlay — the panel + top bar carry the UI */ },
 };
+
+function place(obj, px, pz) { obj.position.x = px; obj.position.z = pz; return obj; }
+void THREE;

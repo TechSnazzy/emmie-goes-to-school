@@ -1,11 +1,9 @@
 // hallway.js — walk down the hall to Emmie's classroom cubbies.
-import { W, H, rect, rr, text, rnd, rndi } from '../engine.js';
-import { walkScene, createWorld, painter } from './_kit.js';
-import { state } from '../state.js';
-import * as S from '../sprites.js';
+import { lerp, rnd, rndi } from '../engine.js';
+import { walkScene, createWorld, put, M } from './_kit.js';
 
-const HW = 1400, HH = 300;
-const TOP = 96, BOT = 270;
+const HW = 1360, HH = 300;
+const TOP = 70, BOT = 268;
 
 export const hallway = walkScene({
   id: 'hallway',
@@ -14,53 +12,70 @@ export const hallway = walkScene({
   endText: 'Almost there  ▶',
   build() {
     const world = createWorld({
-      w: HW, h: HH, start: { x: 40, y: (TOP + BOT) / 2 }, speed: 104,
+      w: HW, h: HH, start: { x: 60, y: (TOP + BOT) / 2 }, speed: 108,
       solids: [
-        { x: 0, y: 0, w: HW, h: TOP - 6 },
-        { x: 0, y: BOT + 6, w: HW, h: HH },
-        { x: 640, y: 150, w: 30, h: 26 },       // custodian cart
+        { x: 0, y: 0, w: HW, h: TOP - 10 },
+        { x: 0, y: BOT + 8, w: HW, h: HH },
+        { x: 640, y: 150, w: 34, h: 30 },
       ],
     });
     const kids = [];
-    for (let i = 0; i < 6; i++) kids.push({ x: rnd(200, HW - 200), y: rnd(TOP + 14, BOT - 14), vx: rnd(-20, 20), vy: rnd(-14, 14), c: ['#e6883c', '#3ca0a0', '#a05ac0', '#5a8ad0'][rndi(0, 4)], anim: rnd(0, 6) });
+    for (let i = 0; i < 7; i++) {
+      kids.push({ x: rnd(220, HW - 180), y: rnd(TOP + 20, BOT - 20), vx: rnd(-22, 22), vy: rnd(-14, 14), i: rndi(0, 6), mesh: null });
+    }
     const C = {
       world, kids,
+      camW: 300, camH: 300, viewSpan: 280, shadowSpan: 250,
+      sky: '#d8cdb2', groundTint: '#8a7f68',
+      dad: { x: 20, y: 190 },
       steps: [
-        { label: 'find your classroom', objective: 'Walk down the hall to Room 3', x: undefined, delay: 1.2 },
-        { label: 'reach your cubby', objective: 'Go to your classroom cubbies  ▶', x: 1340, y: (TOP + BOT) / 2, radius: 42, hold: 0.2 },
+        { label: 'find your classroom', objective: 'Walk down the hall to Room 3', delay: 1.2 },
+        { label: 'reach your cubby', objective: 'Go to your classroom cubbies  ▶', x: 1300, y: (TOP + BOT) / 2, radius: 44, hold: 0.2 },
       ],
-      tick(dt) {
-        for (const k of kids) {
-          k.x += k.vx * dt; k.y += k.vy * dt; k.anim += dt * 6;
-          if (k.x < 150 || k.x > HW - 120) k.vx *= -1;
-          if (k.y < TOP + 10 || k.y > BOT - 10) k.vy *= -1;
-          if (Math.random() < dt * 0.5) { k.vx = rnd(-20, 20); k.vy = rnd(-14, 14); }
-          const dx = k.x - world.em.x, dy = k.y - world.em.y, d = Math.hypot(dx, dy);
-          if (d < 16 && d > 0) { world.em.x -= dx / d * 24 * dt; world.em.y -= dy / d * 24 * dt; }
+      build3d(root) {
+        root.add(put(M.makeGround(HW, HH, M.C.tile), HW / 2, HH / 2));
+        root.add(put(M.makeWall(HW, 96, 24, M.C.wallD), HW / 2, TOP - 22));
+        root.add(put(M.makeLockers(HW - 60), 30, TOP - 6));
+        for (const [x, tone] of [[260, 0], [560, 1], [880, 0], [1120, 1]]) {
+          root.add(put(M.makeDoorway(56, tone ? M.C.woodD : '#7d5a3a'), x, TOP - 8));
         }
+        root.add(put(M.makeCart(), 656, 165));
+        root.add(put(M.makeTrashCan(), 980, 240));
+        root.add(put(M.makeCubbies(150), 1330, TOP + 6));
+
+        for (const k of kids) {
+          const m = M.makeKid(k.i);
+          put(m, k.x, k.y);
+          k.mesh = m;
+          root.add(m);
+        }
+        const dad = M.makePerson(M.PAL.dad);
+        put(dad, C.dad.x, C.dad.y);
+        C.dadMesh = dad;
+        root.add(dad);
+      },
+      tick(dt) {
+        const em = world.em;
+        for (const k of kids) {
+          k.x += k.vx * dt; k.y += k.vy * dt;
+          if (k.x < 200 || k.x > HW - 140) k.vx *= -1;
+          if (k.y < TOP + 16 || k.y > BOT - 16) k.vy *= -1;
+          if (Math.random() < dt * 0.4) { k.vx = rnd(-22, 22); k.vy = rnd(-14, 14); }
+          const dx = k.x - em.x, dy = k.y - em.y, d = Math.hypot(dx, dy);
+          if (d < 26 && d > 0) { em.x -= dx / d * 30 * dt; em.y -= dy / d * 30 * dt; }
+          if (k.mesh) {
+            k.mesh.position.set(k.x, 0, k.y);
+            k.mesh.rotation.y = Math.atan2(k.vx, k.vy);
+            M.stepPerson(k.mesh, (k.x + k.y) * 0.08, true);
+          }
+        }
+        const d = C.dadMesh;
+        d.position.x = lerp(d.position.x, em.x - 34, Math.min(1, dt * 2.6));
+        d.position.z = lerp(d.position.z, em.y + 16, Math.min(1, dt * 2.6));
+        d.rotation.y = Math.atan2(em.x - d.position.x, em.y - d.position.z);
+        M.stepPerson(d, em.anim * 1.2, em.moving);
       },
     };
     return C;
-  },
-  drawScene(C, t, idx) {
-    const wd = C.world, SX = wd.sx, SY = wd.sy;
-    const p = painter();
-    p.bg(() => {
-      rect(0, 0, W, H, '#e7e0cf');
-      rr(SX(0), SY(TOP - 6), HW, BOT - TOP + 12, 0, '#d8cdb2');   // floor band
-      for (let x = -(wd.cam.x % 40); x < W; x += 40) rect(x, SY(TOP), 1, BOT - TOP, 'rgba(0,0,0,0.05)');
-      rr(SX(0), SY(-10), HW, TOP + 4, 0, '#cdbf9c');             // upper wall
-    });
-    p.add(TOP, () => S.drawLockers(SX(20), SY(TOP - 4), HW - 40));
-    [[220, 'ROOM 1'], [520, 'ROOM 2'], [820, 'ART'], [1100, 'GYM']].forEach(([dx, lb]) => p.add(TOP + 1, () => S.drawClassDoor(SX(dx), SY(TOP - 2), lb)));
-    p.add(150, () => S.drawCart(SX(655), SY(176)));
-    p.add(BOT, () => S.drawTrashCan(SX(1000), SY(BOT)));
-    p.add(TOP + 2, () => { rr(SX(1300), SY(TOP - 2), 80, 40, 4, '#f4f0e4'); text('ROOM 3', SX(1340), SY(TOP + 6), { size: 10, align: 'center', color: '#2a7d46', weight: '700' }); });
-
-    for (const k of C.kids) p.add(k.y, () => S.drawKid(SX(k.x), SY(k.y), { color: k.c, dir: k.vx > 0 ? 'right' : 'left', anim: k.anim, moving: true }));
-    p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: '#7b3ff2' }));
-    p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 24), SY(wd.em.y + 8), { dir: wd.em.dir === 'left' ? 'left' : 'right', anim: t * 3, moving: wd.em.moving }));
-    p.flush();
-    void idx;
   },
 });

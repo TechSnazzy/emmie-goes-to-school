@@ -1,67 +1,77 @@
 // line.js — line up in the schoolyard. The teacher comes out to say hello.
-import { W, H, rect, rr, text, lerp, rndi } from '../engine.js';
-import { walkScene, createWorld, painter } from './_kit.js';
+import { lerp } from '../engine.js';
+import { walkScene, createWorld, put, M } from './_kit.js';
 import { sfx } from '../audio.js';
-import { state } from '../state.js';
-import * as S from '../sprites.js';
 
-const YW = 720, YH = 320;
-const LINE = { x: 540, y: 150 };
+const YW = 760, YH = 400;
+const LINE = { x: 540, y: 180 };
 
 export const line = walkScene({
   id: 'line',
   title: 'Line Up!',
   next: 'end',
   endText: '',
-  endHold: 3.2,
+  endHold: 3.4,
   build() {
     const world = createWorld({
-      w: YW, h: YH, start: { x: 40, y: 250 }, speed: 108,
-      solids: [{ x: 0, y: 0, w: YW, h: 90 }, { x: 0, y: YH - 8, w: YW, h: 8 }],
+      w: YW, h: YH, start: { x: 70, y: 320 }, speed: 112,
+      solids: [{ x: 0, y: 0, w: YW, h: 110 }, { x: 0, y: YH - 16, w: YW, h: 16 }],
     });
     const C = {
-      world, teacher: { x: YW + 30, y: 110 }, greet: 0,
+      world,
+      camW: 320, camH: 300, viewSpan: 300, shadowSpan: 270,
+      teacher: { x: YW + 60, y: 150 }, greet: 0, lineKids: [],
       steps: [
-        { label: 'get in line', objective: 'Get in line with your class!', x: LINE.x, y: LINE.y + 40, radius: 40, hold: 0.3, toast: 'You made it! 🎉', onDone: () => { sfx.confirm(); } },
+        { label: 'get in line', objective: 'Get in line with your class!', x: LINE.x, y: LINE.y + 96, radius: 42, hold: 0.3, toast: 'You made it! 🎉' },
       ],
+      build3d(root) {
+        root.add(put(M.makeGround(YW, YH, M.C.blacktop, { margin: 800 }), YW / 2, YH / 2));
+        root.add(put(M.makeSlab(YW, 60, M.C.grass, 4), YW / 2, 130));
+        root.add(put(M.makeSchool(480, 150, 130), 300, 50));
+        root.add(put(M.makeFlagpole(), 74, 120));
+        root.add(put(M.makeBush(), 640, 140));
+        // painted line
+        for (let i = 0; i < 7; i++) root.add(put(M.makeSlab(30, 8, M.C.line, 2), LINE.x + 40, LINE.y - 10 + i * 24));
+
+        for (let i = 0; i < 4; i++) {
+          const k = M.makeKid(i);
+          put(k, LINE.x, LINE.y + i * 24, Math.PI);
+          C.lineKids.push(k);
+          root.add(k);
+        }
+        const t = M.makePerson(M.PAL.teacher);
+        put(t, C.teacher.x, C.teacher.y, -Math.PI / 2);
+        C.teachMesh = t; root.add(t);
+
+        const dad = M.makePerson(M.PAL.dad);
+        put(dad, 30, 336);
+        C.dadMesh = dad; root.add(dad);
+      },
       tick(dt, t, idx) {
+        const em = world.em;
+        C.lineKids.forEach((k, i) => M.stepPerson(k, t * 2 + i, false));
         if (idx >= C.steps.length) {
           C.greet += dt;
-          C.teacher.x = lerp(C.teacher.x, LINE.x + 70, Math.min(1, dt * 1.6));
-          if (C.greet > 0.6 && C.greet < 0.7) sfx.win();
+          C.teacher.x = lerp(C.teacher.x, LINE.x + 110, Math.min(1, dt * 1.6));
+          if (C.greet > 0.5 && C.greet < 0.55) sfx.win();
+          // Emmie slots into the back of the line
+          em.x = lerp(em.x, LINE.x, Math.min(1, dt * 3));
+          em.y = lerp(em.y, LINE.y + 96, Math.min(1, dt * 3));
+          em.dir = 'up';
         }
+        const tm = C.teachMesh;
+        tm.position.set(C.teacher.x, 0, C.teacher.y);
+        tm.rotation.y = -Math.PI / 2;
+        M.stepPerson(tm, t * 6, C.teacher.x > LINE.x + 118);
+
+        const d = C.dadMesh;
+        const tx = idx >= C.steps.length ? em.x - 60 : em.x - 36;
+        d.position.x = lerp(d.position.x, tx, Math.min(1, dt * 2.4));
+        d.position.z = lerp(d.position.z, em.y + 20, Math.min(1, dt * 2.4));
+        d.rotation.y = Math.atan2(em.x - d.position.x, em.y - d.position.z);
+        M.stepPerson(d, em.anim * 1.2, em.moving);
       },
     };
     return C;
-  },
-  drawScene(C, t, idx) {
-    const wd = C.world, SX = wd.sx, SY = wd.sy;
-    const p = painter();
-    p.bg(() => {
-      rect(0, 0, W, H, '#bfe3f2');
-      S.ground('blacktop', wd.cam.x, wd.cam.y, W, H);   // blacktop
-      rr(SX(-20), SY(84), YW + 40, 8, 0, S.PAL.grassD);
-      // painted line markings
-      for (let i = 0; i < 7; i++) rr(SX(LINE.x + 26), SY(LINE.y - 10 + i * 22), 14, 4, 2, '#f2d24d');
-      text('LINE UP', SX(LINE.x + 33), SY(LINE.y - 34), { size: 10, align: 'center', color: '#f2d24d', weight: '700' });
-    });
-    p.add(84, () => S.drawSchoolBuilding(SX(110), SY(90), 430, 74));
-    p.add(83, () => S.drawFlagpole(SX(74), SY(90)));
-    p.add(60, () => S.drawCloud(SX(260), SY(46), 1));
-    // kids already in line
-    for (let i = 0; i < 4; i++) p.add(LINE.y + i * 20, () => S.drawKid(SX(LINE.x), SY(LINE.y + i * 20), { color: ['#e6883c', '#3ca0a0', '#a05ac0', '#5a8ad0'][i], dir: 'up', anim: t * 3 + i, moving: false }));
-    if (idx >= C.steps.length) p.add(LINE.y + 80, () => S.drawEmmie(SX(LINE.x), SY(LINE.y + 80), { dir: 'up', anim: 0, moving: false, backpack: null }));
-    else {
-      p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving }));
-      p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 24), SY(wd.em.y + 8), { dir: 'right', anim: t * 3, moving: wd.em.moving }));
-    }
-    p.add(C.teacher.y + 44, () => S.drawTeacher(SX(C.teacher.x), SY(C.teacher.y + 44), { dir: 'left', anim: t * 4, moving: idx >= C.steps.length && C.teacher.x > LINE.x + 74 }));
-    p.flush();
-
-    if (idx >= C.steps.length && C.greet > 0.5) {
-      const bx = W / 2;
-      rr(bx - 150, 60, 300, 40, 12, 'rgba(28,22,38,0.85)');
-      text('"Good morning, Emmie!"', bx, 70, { size: 15, align: 'center', color: '#8fe07a', weight: '700' });
-    }
   },
 });

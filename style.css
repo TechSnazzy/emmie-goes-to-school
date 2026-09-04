@@ -3,80 +3,151 @@
 html, body {
   height: 100%;
   width: 100%;
-  background: #12101a;
   overflow: hidden;
+  background: #17131f;
+  color: #f1ecf6;
   font-family: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
-  color: #fff;
 }
 
-#stage {
+#app {
   position: fixed;
   inset: 0;
   display: flex;
+  flex-direction: column;
+}
+
+/* ---------------- top bar ---------------- */
+#topbar {
+  flex: 0 0 auto;
+  height: 52px;
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: #221b30;
+  border-bottom: 2px solid #34293f;
+  z-index: 4;
 }
 
-#screen {
-  display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  background: #1b1526;
-  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+#sun { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.sun-dot { font-size: 20px; color: #ffd23f; }
+#sun .bar {
+  width: 130px; height: 12px; border-radius: 7px;
+  background: #100c18; overflow: hidden;
+  border: 2px solid #3d3350;
+}
+#sunfill { height: 100%; width: 0%; background: #8fe07a; transition: width .25s linear, background .4s; }
+#sun .lbl { font-size: 12px; color: #9d94ad; font-weight: 600; }
+
+#obj {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: clamp(13px, 2.1vw, 19px);
+  font-weight: 800;
+  color: #ffd23f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* audio buttons, pinned to the top-right of the viewport */
-#audiobtns {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 8px;
-  z-index: 5;
-}
+#audiobtns { display: flex; gap: 6px; flex: 0 0 auto; }
 #audiobtns button {
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 13px;
-  color: #2a2436;
-  background: rgba(255, 255, 255, 0.82);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  padding: 5px 10px;
-  cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: 12px;
+  color: #2a2436; background: #efe9f5;
+  border: 2px solid #cbbfd8; border-radius: 10px;
+  padding: 4px 9px; cursor: pointer;
 }
-#audiobtns button.off {
-  color: #fff;
-  background: rgba(60, 55, 75, 0.7);
+#audiobtns button.off { color: #cfc6da; background: #3a3049; border-color: #4b3f5c; }
+
+/* ---------------- main row ---------------- */
+#main { flex: 1 1 auto; display: flex; min-height: 0; }
+
+#view {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #bfe6f2;
+}
+#view3d { display: block; width: 100%; height: 100%; }
+#ui {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
 }
 
-/* touch controls */
-#touch {
-  position: fixed;
-  inset: auto 0 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 18px 22px calc(18px + env(safe-area-inset-bottom));
+#toast {
+  position: absolute;
+  top: 14px; left: 0; right: 0;
+  text-align: center;
+  font-size: 20px; font-weight: 800;
+  color: #8fe07a;
+  text-shadow: 0 2px 0 rgba(0,0,0,.45);
   pointer-events: none;
-  z-index: 5;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#toast.show { opacity: 1; }
+
+/* ---------------- side panel (never over the view) ---------------- */
+#panel {
+  flex: 0 0 190px;
+  background: #221b30;
+  border-left: 2px solid #34293f;
+  padding: 14px 12px;
+  overflow-y: auto;
+  z-index: 3;
+}
+#panel h3 {
+  font-size: 15px; font-weight: 800; color: #8fd0ff;
+  margin-bottom: 10px; letter-spacing: .3px;
+}
+#panel ul { list-style: none; }
+#panel li {
+  font-size: 14px; font-weight: 600; color: #e6dff0;
+  padding: 5px 0 5px 22px; position: relative; line-height: 1.25;
+}
+#panel li::before {
+  content: '○'; position: absolute; left: 2px; top: 5px; color: #6f6483;
+}
+#panel li.done { color: #8fe07a; }
+#panel li.done::before { content: '●'; color: #8fe07a; }
+#panel-hint {
+  margin-top: 16px; padding-top: 12px;
+  border-top: 2px solid #34293f;
+  font-size: 12px; color: #9d94ad; line-height: 1.5;
+}
+
+/* ---------------- touch ---------------- */
+#touch {
+  position: fixed; inset: auto 0 0 0;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  pointer-events: none; z-index: 6;
 }
 #touch button {
-  pointer-events: auto;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 16px;
-  color: #fff;
-  background: rgba(28, 24, 40, 0.78);
-  border: 2px solid rgba(255, 255, 255, 0.28);
-  border-radius: 14px;
-  width: 56px;
-  height: 56px;
-  touch-action: none;
-  user-select: none;
+  pointer-events: auto; font-family: inherit; font-weight: 700; font-size: 16px;
+  color: #fff; background: rgba(28,24,40,.8);
+  border: 2px solid rgba(255,255,255,.28); border-radius: 14px;
+  width: 54px; height: 54px; touch-action: none; user-select: none;
 }
 #touch button:active { background: #ff5aa8; }
-#touch .dpad { display: grid; justify-items: center; gap: 6px; }
-#touch .row { display: flex; gap: 6px; }
-#touch .big { width: 84px; height: 84px; border-radius: 50%; font-size: 24px; }
+#touch .dpad { display: grid; justify-items: center; gap: 5px; }
+#touch .row { display: flex; gap: 5px; }
+#touch .big { width: 80px; height: 80px; border-radius: 50%; font-size: 22px; }
+
+/* screens (title / story / end) take the whole view */
+body.screen #panel { display: none; }
+body.screen #topbar #obj,
+body.screen #sun { visibility: hidden; }
+
+@media (max-width: 720px) {
+  #main { flex-direction: column; }
+  #panel {
+    flex: 0 0 auto; border-left: none; border-top: 2px solid #34293f;
+    padding: 8px 12px; max-height: 132px;
+  }
+  #panel ul { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  #panel-hint { display: none; }
+  #panel h3 { margin-bottom: 4px; }
+}
