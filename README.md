@@ -1,8 +1,9 @@
 # Emmie Goes to School 🎒
 
 A gentle little game for a 7-year-old. It's morning — help Emmie wake up, get
-ready, and walk to class. Walk around with the arrow keys and press **Z** at the
-glowing ring. A yellow arrow always points to the next thing to do.
+ready, and walk to class. **Click where she should go** and she walks there by
+herself, around the furniture. A yellow ring shows the next job — get her to it
+and she does the rest. No keys to hold.
 
 **You can't lose.** Emmie always makes it to class — a friendly sun fills up as
 the morning goes, and finishing quickly earns more stars (★★★).
@@ -14,7 +15,7 @@ the morning goes, and finishing quickly earns more stars (★★★).
 1. **Getting ready** – Mom helps: wake up, turn on the light, get dressed, go
    potty, brush teeth, shoes + coat. Milo the cat comes to say hi.
 2. **Out the door** – grab your lunchbox, then get in the white Tesla. Dad drives.
-3. **Driving** – steer with ◀ ▶. You can't crash — bumping a car just goes "beep beep".
+3. **Driving** – click or drag left and right to steer. You can't crash — bumping a car just goes "beep beep".
 4. **Through the park** – say hi to the friendly dog, walk to the school gate.
 5. **The gate** – it's locked; wait for a grown-up to open it (pet the puppy while you wait).
 6. **Down the hall** – walk to Room 3.
@@ -23,14 +24,15 @@ the morning goes, and finishing quickly earns more stars (★★★).
 
 ## Controls
 
-| Action | Keys |
-|--------|------|
-| Walk   | Arrow keys / `WASD` |
-| Do it  | `Z` / `Enter` / `Space` |
+| Action | How |
+|--------|-----|
+| Walk   | Click or tap where she should go |
+| Do a job | Just arrive at the glowing ring |
+| Walk (optional) | Arrow keys / `WASD` still work |
 | Music on/off | `M` (or the **♪ music** button) |
 | Sounds on/off | `N` (or the **🔊 sounds** button) |
 
-On a phone or tablet the touch controls appear automatically.
+On a phone or tablet, tap where she should go — same thing.
 
 ## Run it locally
 
@@ -60,7 +62,7 @@ src/render3d.js      isometric camera, lights, shadows, scene root
 src/models.js        the low-poly model library
 src/engine.js        input, loop, math, the 2D overlay used by the screens
 src/audio.js         the calm morning theme + soft sound effects
-src/world.js         movement, collision and camera targeting in game-space
+src/world.js         movement, collision, A* click-to-walk pathfinding, camera
 src/state.js         morning progress, stars, DOM HUD, scene manager
 src/router.js        scene registry (keeps scenes decoupled)
 src/scenes/          one file per scene (+ _kit.js shared plumbing)
