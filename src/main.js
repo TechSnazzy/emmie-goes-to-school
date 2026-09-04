@@ -26,7 +26,7 @@ const intro = makeStory([
   ['Emmie Goes to School', "It's 6:50 in the morning."],
   ['Walk with the ARROW KEYS.', 'Press  Z  at the glowing spot.'],
   ['A yellow arrow always points', 'to the next thing to do.'],
-  [() => `Today ${state.parent} walks with Emmie.`, "Let's have a great morning!"],
+  ['Mom helps Emmie get ready,', 'then Dad walks her to school.'],
 ], () => go('bedroom'));
 
 [['title', title], ['intro', intro], ['bedroom', bedroom], ['leave', leave], ['drive', drive],

@@ -56,7 +56,7 @@ export const fence = walkScene({
     const p = painter();
     p.bg(() => {
       rect(0, 0, W, H, '#bfe3f2');
-      S.ground(S.PAL.grass, S.PAL.grassD, 40, wd.cam.x, wd.cam.y, W, H);
+      S.ground("grass", wd.cam.x, wd.cam.y, W, H);
       rr(SX(-20), SY(228), GW + 40, 60, 0, '#c3c8cc');    // sidewalk to gate
     });
     p.add(120, () => { S.drawSchoolBuilding(SX(120), SY(150), 460, 120); });

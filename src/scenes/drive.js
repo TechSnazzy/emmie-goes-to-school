@@ -59,9 +59,6 @@ export const drive = {
 
     for (const c of cars) S.drawCar(c.x, c.y, c.c, { dir: 'down' });
     S.drawTesla(carX, carScreenY, { dir: 'up' });
-    // a little family in the windshield
-    ctx.fillStyle = '#3a2a2a';
-    ctx.fillRect(carX - 10, carScreenY - 40, 6, 6); ctx.fillRect(carX + 4, carScreenY - 40, 6, 6);
 
     // progress
     rr(20, H / 2 - 70, 10, 140, 5, 'rgba(0,0,0,0.3)');

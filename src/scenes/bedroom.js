@@ -92,8 +92,8 @@ export const bedroom = walkScene({
     p.add(300, () => { S.drawDoor(SX(DOOR.x), SY(DOOR.y + 4), 40, idx >= C.steps.length - 1); S.drawLightSwitch(SX(356), SY(292), C.lightOn); });
     p.add(298, () => { rr(SX(224), SY(292), 52, 16, 4, '#7a5a3a'); S.drawBackpack(SX(250), SY(300)); }); // shoe/coat mat by door
 
-    // Mom is in the room helping Emmie wake up
-    p.add(232, () => S.drawMom(SX(110), SY(232), { dir: 'right', anim: t * 2, moving: false }));
+    // Mom is right by the bed helping Emmie wake up
+    p.add(196, () => S.drawMom(SX(96), SY(196), { dir: 'right', anim: t * 2, moving: false }));
 
     // Milo
     p.add(milo.y, () => S.drawCat(SX(milo.x), SY(milo.y), { dir: milo.dir, anim: milo.anim, moving: milo.pauseT <= 0 }));
@@ -101,10 +101,8 @@ export const bedroom = walkScene({
     // Emmie
     if (idx === 0) {
       p.add(150.5, () => {
-        // lying in bed
-        S.oEll(SX(150), SY(150), 12, 8, S.PAL.skin);
-        S.oRR(SX(150) - 10, SY(150) - 8, 20, 6, 3, S.PAL.emmieHair);
-        text('z', SX(168), SY(140) - t * 6 % 12, { size: 12, color: '#fff', weight: '700' });
+        S.drawSleeper(SX(150), SY(150));
+        text('z', SX(170), SY(138) - (t * 6 % 14), { size: 12, color: '#fff', weight: '700' });
       });
     } else {
       p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: idx >= C.steps.length - 1 ? '#7b3ff2' : null }));

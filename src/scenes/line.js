@@ -39,7 +39,7 @@ export const line = walkScene({
     const p = painter();
     p.bg(() => {
       rect(0, 0, W, H, '#bfe3f2');
-      S.ground('#8a8f95', '#7c8187', 44, wd.cam.x, wd.cam.y, W, H);   // blacktop
+      S.ground('blacktop', wd.cam.x, wd.cam.y, W, H);   // blacktop
       rr(SX(-20), SY(84), YW + 40, 8, 0, S.PAL.grassD);
       // painted line markings
       for (let i = 0; i < 7; i++) rr(SX(LINE.x + 26), SY(LINE.y - 10 + i * 22), 14, 4, 2, '#f2d24d');

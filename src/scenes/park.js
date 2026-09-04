@@ -47,7 +47,7 @@ export const park = walkScene({
     const p = painter();
     p.bg(() => {
       rect(0, 0, W, H, '#bfe3f2');
-      S.ground(S.PAL.grass, S.PAL.grassD, 40, wd.cam.x, wd.cam.y, W, H);
+      S.ground("grass", wd.cam.x, wd.cam.y, W, H);
       // winding path
       rr(SX(-20), SY(206), PW + 40, 70, 20, S.PAL.path);
       rr(SX(-20), SY(214), PW + 40, 8, 0, S.PAL.pathD);
