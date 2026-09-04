@@ -82,6 +82,45 @@ function resize() {
 window.addEventListener('resize', resize);
 export { resize };
 
+// --- pointer picking: screen -> the ground plane --------------------------
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitPoint = new THREE.Vector3();
+let pendingClick = null;
+let pointerDown = false;
+let pointerWorld = null;
+
+function toWorld(ev) {
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  ndc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+  ndc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+  raycaster.setFromCamera(ndc, camera);
+  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return null;
+  return { x: hitPoint.x, y: hitPoint.z };
+}
+canvas.style.touchAction = 'none';
+canvas.addEventListener('pointerdown', (e) => {
+  pointerDown = true;
+  canvas.setPointerCapture?.(e.pointerId);
+  const w = toWorld(e);
+  if (w) { pendingClick = w; pointerWorld = w; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointerDown) return;
+  const w = toWorld(e);
+  if (w) pointerWorld = w;
+});
+const releasePointer = () => { pointerDown = false; };
+window.addEventListener('pointerup', releasePointer);
+window.addEventListener('pointercancel', releasePointer);
+
+/** Returns {x,y} once per click, then clears it. */
+export function consumeClick() { const c = pendingClick; pendingClick = null; return c; }
+/** Live pointer state, for drag-steering. */
+export function pointerState() { return { down: pointerDown, world: pointerWorld }; }
+
 // --- the swappable scene root --------------------------------------------
 let root = new THREE.Group();
 scene.add(root);
@@ -98,6 +137,14 @@ function disposeTree(obj) {
     if (o.geometry) o.geometry.dispose();
     if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
   });
+}
+
+/** World ground point -> page pixel coords (used by the automated tests). */
+const projV = new THREE.Vector3();
+export function projectToScreen(x, y) {
+  projV.set(x, 0, y).project(camera);
+  const r = canvas.getBoundingClientRect();
+  return { x: r.left + (projV.x * 0.5 + 0.5) * r.width, y: r.top + (-projV.y * 0.5 + 0.5) * r.height };
 }
 
 export function render() { renderer.render(scene, camera); }

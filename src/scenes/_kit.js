@@ -1,9 +1,10 @@
 // _kit.js — shared plumbing for the walk-to-the-marker scenes, now in 3D.
 import { state, tickProgress, setScene, setObjective, checkOff, toast } from '../state.js';
+import { input } from '../engine.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
 import { createWorld, interact } from '../world.js';
-import { newRoot, lookAtWorld, snapTo, setViewSpan, setShadowSpan, setSky, setLightLevel, THREE } from '../render3d.js';
+import { newRoot, lookAtWorld, snapTo, setViewSpan, setShadowSpan, setSky, setLightLevel, consumeClick, projectToScreen, THREE } from '../render3d.js';
 import * as M from '../models.js';
 
 export { createWorld, interact, go, setObjective, toast, M, THREE, setLightLevel };
@@ -20,13 +21,14 @@ export function put(obj, x, y, ry = 0) { obj.position.set(x, obj.position.y, y);
  */
 export function walkScene({ id, title, build, next, endText = 'All done!  ▶', endHold = 0.7 }) {
   let C = null, t = 0, idx = 0, endTimer = 0, narrT = 0;
-  let marker = null, pointer = null, bar = null, emmie = null;
+  let marker = null, pointer = null, bar = null, emmie = null, dest = null, armed = false;
 
   return {
     id,
     enter(payload) {
       const root = newRoot();
-      t = 0; idx = 0; endTimer = 0; narrT = 0;
+      t = 0; idx = 0; endTimer = 0; narrT = 0; armed = false;
+      consumeClick();               // drop a click left over from the previous screen
       C = build(payload) || {};
       C.root = root;
       if (C.build3d) C.build3d(root);
@@ -42,6 +44,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       marker = M.makeMarker(); root.add(marker);
       pointer = M.makePointer(); root.add(pointer);
       bar = M.makeProgressBar(); root.add(bar);
+      dest = M.makeDestRing(); dest.visible = false; root.add(dest);
 
       const list = (C.steps || []).filter((s) => s.label).map((s) => ({ label: s.label, done: false }));
       setScene(title, list);
@@ -56,6 +59,12 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       const steps = C.steps || [];
       const cur = steps[idx];
       const locked = (C.locked && C.locked(idx, t)) || false;
+
+      // click / tap anywhere on the ground to walk there
+      const click = consumeClick();
+      if (click) { armed = true; if (!locked) C.world.moveTo(click.x, click.y); }
+      if (input.anyPressed()) armed = true;
+
       C.world.update(dt, { locked, bounds: C.bounds !== false });
       if (C.tick) C.tick(dt, t, idx);
 
@@ -71,7 +80,11 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
           narrT += dt;
           if (narrT > (cur.delay || 1.4)) { if (cur.onDone) cur.onDone(C); idx++; narrT = 0; }
         } else if (cur.ready === undefined || cur.ready(C, t)) {
-          if (interact(C.world, cur.x, cur.y, dt, { hold: cur.hold ?? 0.5, radius: cur.radius ?? 30 })) {
+          const rad = cur.radius ?? 30;
+          const near = Math.hypot(cur.x - C.world.em.x, cur.y - C.world.em.y) < rad + 18;
+          // arriving at the marker is enough — she does the job herself
+          if (near && armed) C.world.stop();
+          if (interact(C.world, cur.x, cur.y, dt, { hold: cur.hold ?? 0.5, radius: rad, auto: armed })) {
             checkOff(cur.label);
             sfx.done();
             if (cur.onDone) cur.onDone(C);
@@ -93,6 +106,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       M.stepPerson(emmie, em.anim * 1.2, em.moving);
 
       const showMarker = !!(cur && cur.x !== undefined && (cur.ready === undefined || cur.ready(C, t)));
+      if (globalThis.__dbg) globalThis.__dbg.target = showMarker ? projectToScreen(cur.x, cur.y) : null;
       marker.visible = showMarker;
       pointer.visible = showMarker;
       if (showMarker) {
@@ -112,6 +126,10 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
         bar.userData.fg.scale.x = Math.max(0.01, em.act);
         bar.userData.fg.position.x = -22 * (1 - em.act);
       }
+
+      const goal = C.world.em.goal;
+      dest.visible = !!goal;
+      if (goal) { dest.position.set(goal.x, 0, goal.y); dest.userData.ring.rotation.z = -t * 2.4; }
 
       if (C.sync) C.sync(C, t, idx);
       const c = C.world.camAt(C.camW || 380, C.camH || 300);

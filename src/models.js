@@ -455,6 +455,22 @@ export function makeMarker() {
   g.userData = { ring, arrow, disc };
   return g;
 }
+export function makeDestRing() {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(15, 2.4, 6, 20),
+    new THREE.MeshBasicMaterial({ color: '#8fe0ff', transparent: true, opacity: 0.9 }),
+  );
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 2;
+  const disc = new THREE.Mesh(
+    new THREE.CircleGeometry(15, 20),
+    new THREE.MeshBasicMaterial({ color: '#8fe0ff', transparent: true, opacity: 0.25 }),
+  );
+  disc.rotation.x = -Math.PI / 2; disc.position.y = 1.2;
+  g.add(ring, disc);
+  g.userData = { ring };
+  return g;
+}
 export function makePointer() {
   const m = new THREE.Mesh(
     new THREE.ConeGeometry(7, 18, 6),

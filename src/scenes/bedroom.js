@@ -33,7 +33,7 @@ export const bedroom = walkScene({
       locked: (idx) => idx === 0,
       steps: [
         {
-          label: 'wake up', objective: 'Say good morning — press Z in bed',
+          label: 'wake up', objective: 'Say good morning to Mom',
           x: 290, y: 132, my: 34, radius: 46, hold: 0.5, toast: 'Good morning!',
           onDone: (c) => { c.world.em.x = 290; c.world.em.y = 196; },
         },

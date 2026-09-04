@@ -44,23 +44,21 @@ export const input = {
   }),
   anyPressed: () => edgeDown.size > 0,
 };
-function endFrameInput() { edgeDown.clear(); }
+// A click counts as one edge-only "act" press: enough to advance a story
+// card, but never registers as a *held* key.
+const virtualHeld = [];
+export function virtualPress(a) { press(a); virtualHeld.push(a); }
+function endFrameInput() {
+  edgeDown.clear();
+  while (virtualHeld.length) release(virtualHeld.pop());
+}
+const viewEl = document.getElementById('view');
+if (viewEl) viewEl.addEventListener('pointerdown', () => virtualPress('act'));
 
-// touch controls
+// Touch uses tap-to-walk like the mouse, so the old d-pad is retired.
 export function initTouch() {
   const pad = document.getElementById('touch');
-  if (!pad || !('ontouchstart' in window)) return;
-  pad.hidden = false;
-  const bind = (id, a) => {
-    const el = document.getElementById(id); if (!el) return;
-    const on = (e) => { e.preventDefault(); press(a); };
-    const off = (e) => { e.preventDefault(); release(a); };
-    el.addEventListener('touchstart', on, { passive: false });
-    el.addEventListener('touchend', off, { passive: false });
-    el.addEventListener('touchcancel', off, { passive: false });
-  };
-  bind('t-left', 'left'); bind('t-right', 'right'); bind('t-up', 'up'); bind('t-down', 'down');
-  bind('t-act', 'act');
+  if (pad) pad.remove();
 }
 
 // music / sfx toggle hooks — audio.js registers these

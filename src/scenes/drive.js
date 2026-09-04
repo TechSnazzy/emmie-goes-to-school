@@ -3,7 +3,7 @@ import { input, clamp, rnd, rndi, chance } from '../engine.js';
 import { state, tickProgress, setScene, setObjective, toast } from '../state.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
-import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel, THREE } from '../render3d.js';
+import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel, pointerState, THREE } from '../render3d.js';
 import * as M from '../models.js';
 
 const ROAD_W = 260;
@@ -44,11 +44,16 @@ export const drive = {
 
   update(dt) {
     t += dt; tickProgress(dt); beepCd -= dt; msgT += dt;
-    setObjective('Drive to the park — steer with ◀ ▶');
+    setObjective('Drive to the park — click or drag to steer');
     dist += SPEED * dt;
     const z = -dist;
 
-    const steer = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
+    let steer = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
+    const ptr = pointerState();
+    if (!steer && ptr.down && ptr.world) {
+      const want = clamp(ptr.world.x, -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
+      steer = Math.abs(want - x) < 4 ? 0 : Math.sign(want - x);
+    }
     x = clamp(x + steer * 150 * dt, -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
     car.position.set(x, 0, z);
     car.rotation.z = -steer * 0.05;

@@ -43,8 +43,8 @@ export const title = {
     text('GOES TO SCHOOL', W / 2, 74, { size: 20, align: 'center', color: '#fff', weight: '800' });
     text("It's a big morning. Help Emmie get to class!", W / 2, 104, { size: 13, align: 'center', color: '#40243a', weight: '700' });
     rr(W / 2 - 150, H - 62, 300, 52, 14, 'rgba(26,20,36,0.72)');
-    text('Arrow keys / WASD to walk   ·   Z to do things', W / 2, H - 56, { size: 12, align: 'center', color: '#cfc6da', weight: '700' });
-    if (t % 1.15 < 0.75) text('press  Z  to start', W / 2, H - 36, { size: 17, align: 'center', color: '#8fe07a', weight: '800' });
+    text('Click where Emmie should go — she walks there herself', W / 2, H - 56, { size: 12, align: 'center', color: '#cfc6da', weight: '700' });
+    if (t % 1.15 < 0.75) text('click anywhere to start', W / 2, H - 36, { size: 17, align: 'center', color: '#8fe07a', weight: '800' });
     if (state.best) text(`best: ${'★'.repeat(state.best.stars)}${'☆'.repeat(3 - state.best.stars)}`, 14, 12, { size: 13, color: '#7a4a1a', weight: '800' });
   },
 };

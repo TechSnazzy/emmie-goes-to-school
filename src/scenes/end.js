@@ -63,7 +63,7 @@ export const end = {
     text(msg, W / 2, 106, { size: 15, align: 'center', color: '#3a2a3a', weight: '800' });
     text(`morning took ${Math.round(state.elapsed)} seconds`, W / 2, 128, { size: 12, align: 'center', color: '#5a4a44', weight: '600' });
     if (state.best) text(`best: ${'★'.repeat(state.best.stars)}${'☆'.repeat(3 - state.best.stars)}  (${state.best.time}s)`, W / 2, 146, { size: 12, align: 'center', color: '#7a5a2a', weight: '700' });
-    if (t > 1.2 && (t * 2 | 0) % 2) text('press  Z  to play again', W / 2, H - 28, { size: 15, align: 'center', color: '#1f6b3a', weight: '800' });
+    if (t > 1.2 && (t * 2 | 0) % 2) text('click to play again', W / 2, H - 28, { size: 15, align: 'center', color: '#1f6b3a', weight: '800' });
     void clamp;
   },
 };

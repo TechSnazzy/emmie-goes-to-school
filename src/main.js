@@ -24,8 +24,8 @@ initTouch();
 
 const intro = makeStory([
   ['Emmie Goes to School', "It's 6:50 in the morning."],
-  ['Walk with the ARROW KEYS.', 'Press  Z  at the glowing ring.'],
-  ['A yellow arrow always points', 'to the next thing to do.'],
+  ['Click where Emmie should go.', 'She walks there all by herself.'],
+  ['A yellow ring shows the next job —', 'click it and she does the rest.'],
   ['Mom helps Emmie get ready,', 'then Dad walks her to school.'],
 ], () => go('bedroom'));
 

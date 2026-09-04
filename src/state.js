@@ -123,7 +123,7 @@ export function makeStory(pages, onDone) {
       const lines = (Array.isArray(p) ? p : [p]).map((l) => (typeof l === 'function' ? l() : l));
       let y = H / 2 - lines.length * 13;
       lines.forEach((ln, k) => { text(ln, W / 2, y, { size: k === 0 ? 20 : 14, align: 'center', color: k === 0 ? '#ffd23f' : '#dfe7f5', weight: k === 0 ? '800' : '600' }); y += 26; });
-      if (t % 1 < 0.6) text('press  Z  ▶', W / 2, H - 44, { size: 12, align: 'center', color: '#8fe07a', weight: '700' });
+      if (t % 1 < 0.6) text('click to continue  ▶', W / 2, H - 44, { size: 12, align: 'center', color: '#8fe07a', weight: '700' });
     },
   };
 }
