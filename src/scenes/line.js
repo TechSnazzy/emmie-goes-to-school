@@ -3,7 +3,7 @@
 // kids fidget and shuffle until the teacher arrives, then everyone —
 // teacher, Emmie, and the whole line — walks together into the school.
 import { lerp } from '../engine.js';
-import { walkScene, createWorld, put, go, M } from './_kit.js';
+import { walkScene, createWorld, put, go, toast, M } from './_kit.js';
 import { sfx } from '../audio.js';
 import { state, PAR } from '../state.js';
 
@@ -101,13 +101,19 @@ export const line = walkScene({
           if (C.greet > 0.5 && C.greet < 0.55) sfx.win();
 
           // Emmie slots in wherever her pace earned her
-          const mySlotY = LINE.y + (C.slot ?? 4) * 24;
-          em.x = lerp(em.x, LINE.x, Math.min(1, dt * 3));
-          em.y = lerp(em.y, mySlotY, Math.min(1, dt * 3));
-          em.dir = 'up';
+          if (!C.departing) {
+            const mySlotY = LINE.y + (C.slot ?? 4) * 24;
+            em.x = lerp(em.x, LINE.x, Math.min(1, dt * 3));
+            em.y = lerp(em.y, mySlotY, Math.min(1, dt * 3));
+            em.dir = 'up';
+          }
 
-          // once everyone's settled, the whole line walks in together
-          if (settled && !C.departing && C.greet > 3.1) C.departing = true;
+          // once everyone's settled, say bye to Dad, then the whole line walks in together
+          if (settled && !C.departing && C.greet > 3.1) {
+            C.departing = true;
+            em.dir = 'left';
+            toast('Bye Dad! 👋'); sfx.confirm();
+          }
           if (C.departing) {
             C.departT += dt;
             const p = Math.min(1, C.departT / 2.6);

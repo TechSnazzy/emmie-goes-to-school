@@ -110,6 +110,7 @@ export const drive = {
       const c = cars[i];
       if (c.oncoming) c.m.position.z += (CRUISE_SPEED * 0.55 + c.v) * dt;
       else c.m.position.z -= (CRUISE_SPEED + c.v) * dt;
+      if (c.police) { c.blinkT += dt; c.beacon.visible = Math.floor(c.blinkT * 6) % 2 === 0; }
       if (beepCd <= 0 && Math.abs(c.m.position.x - x) < 46 && Math.abs(c.m.position.z - z) < 92) {
         beepCd = 1.3; sfx.beep(); toast('beep beep!');
         x = clamp(x + (x < c.m.position.x ? -34 : 34), -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
@@ -125,11 +126,15 @@ export const drive = {
 };
 
 function spawnPolice(z) {
-  const m = M.makeCar('#f6f4f0');
+  const m = M.makeCar('#1c1c22'); // black & white cruiser with a blinking red beacon
+  m.add(M.box(46, 3, 30, '#f6f4f0', 0, 17, -10));
+  m.add(M.box(14, 4, 10, '#26262c', 0, 30, 0));
+  const beacon = M.box(6, 3, 6, '#ff3b30', -5, 33, 0);
+  m.add(beacon);
   const lane = clamp(x + rnd(-20, 20), 14, ROAD_W / 2 - 34);
   m.position.set(lane, 0, z + 200);
   root.add(m);
-  cars.push({ m, oncoming: false, v: 140 }); // catches up, then blows past
+  cars.push({ m, oncoming: false, v: 140, police: true, beacon, blinkT: 0 }); // catches up, then blows past
 }
 
 function place(obj, px, pz) { obj.position.x = px; obj.position.z = pz; return obj; }

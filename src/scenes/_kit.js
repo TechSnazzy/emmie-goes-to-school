@@ -1,6 +1,6 @@
 // _kit.js — shared plumbing for the walk-to-the-marker scenes, now in 3D.
 import { state, tickProgress, setScene, setObjective, checkOff, toast } from '../state.js';
-import { input } from '../engine.js';
+import { input, lerp } from '../engine.js';
 import { sfx } from '../audio.js';
 import { go } from '../router.js';
 import { createWorld, interact } from '../world.js';
@@ -24,12 +24,13 @@ export function put(obj, x, y, ry = 0) { obj.position.set(x, obj.position.y, y);
 export function walkScene({ id, title, build, next, endText = 'All done!  ▶', endHold = 0.7 }) {
   let C = null, t = 0, idx = 0, endTimer = 0, narrT = 0;
   let marker = null, pointer = null, bar = null, emmie = null, dest = null, armed = false;
+  let zoomT = 0, idleT = 999; // camera starts zoomed out; clicking zooms in, 5s idle zooms back out
 
   return {
     id,
     enter(payload) {
       const root = newRoot();
-      t = 0; idx = 0; endTimer = 0; narrT = 0; armed = false;
+      t = 0; idx = 0; endTimer = 0; narrT = 0; armed = false; zoomT = 0; idleT = 999;
       consumeClick();               // drop a click left over from the previous screen
       C = build(payload) || {};
       C.root = root;
@@ -67,6 +68,16 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       const click = consumeClick();
       if (click) { armed = true; if (!locked) C.world.moveTo(click.x, click.y); }
       if (input.anyPressed()) armed = true;
+
+      // camera zoom: zoomed out by default, zooms in on activity, back out after 5s idle
+      let camW = C.camW || 380, camH = C.camH || 300;
+      if (click || input.anyPressed()) idleT = 0; else idleT += dt;
+      if (C.roomW) {
+        zoomT = lerp(zoomT, idleT < 5 ? 1 : 0, Math.min(1, dt * 1.6));
+        const inW = Math.min(C.roomW, 320), inH = Math.min(C.roomH, 280);
+        camW = lerp(C.roomW, inW, zoomT); camH = lerp(C.roomH, inH, zoomT);
+        setRoomBounds(camW, camH, C.wallH || 90);
+      }
 
       C.world.update(dt, { locked, bounds: C.bounds !== false });
       if (C.tick) C.tick(dt, t, idx);
@@ -135,7 +146,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       if (goal) { dest.position.set(goal.x, 0, goal.y); dest.userData.ring.rotation.z = -t * 2.4; }
 
       if (C.sync) C.sync(C, t, idx);
-      const c = C.world.camAt(C.camW || 380, C.camH || 300);
+      const c = C.world.camAt(camW, camH);
       lookAtWorld(c.x, c.y, Math.min(1, dt * 4));
     },
   };
