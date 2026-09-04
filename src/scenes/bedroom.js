@@ -2,7 +2,6 @@
 import { W, H, ctx, rect, rr, text, clamp, rnd, dist } from '../engine.js';
 import { walkScene, createWorld, painter } from './_kit.js';
 import { sfx } from '../audio.js';
-import { state } from '../state.js';
 import * as S from '../sprites.js';
 
 const RW = 600, RH = 340;
@@ -93,8 +92,8 @@ export const bedroom = walkScene({
     p.add(300, () => { S.drawDoor(SX(DOOR.x), SY(DOOR.y + 4), 40, idx >= C.steps.length - 1); S.drawLightSwitch(SX(356), SY(292), C.lightOn); });
     p.add(298, () => { rr(SX(224), SY(292), 52, 16, 4, '#7a5a3a'); S.drawBackpack(SX(250), SY(300)); }); // shoe/coat mat by door
 
-    // Mom near the bed
-    p.add(232, () => S.drawParentBy(state.parent === 'DAD' ? 'MOM' : 'DAD', SX(110), SY(232), { dir: 'right', anim: t * 2, moving: false }));
+    // Mom is in the room helping Emmie wake up
+    p.add(232, () => S.drawMom(SX(110), SY(232), { dir: 'right', anim: t * 2, moving: false }));
 
     // Milo
     p.add(milo.y, () => S.drawCat(SX(milo.x), SY(milo.y), { dir: milo.dir, anim: milo.anim, moving: milo.pauseT <= 0 }));
