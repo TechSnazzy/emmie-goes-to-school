@@ -1,10 +1,11 @@
-// main.js — boot the game: register scenes, wire the loop, draw the shared HUD.
-import { W, H, ctx, startLoop, text } from './engine.js';
+// main.js — wire scenes together and run the loop.
+import { W, H, ctx, startLoop, initTouch } from './engine.js';
+import { settings, toggleMusic, toggleSfx } from './audio.js';
 import {
-  state, fmtClock, drawHUD, drawToasts, updateToasts,
-  updateSceneManager, currentScene, setScene, drawWipe, makeStory, START,
+  state, resetRun, makeStory, updateSceneManager, currentScene,
+  goScene, drawFade, drawHUD, drawToasts, updateToasts,
 } from './state.js';
-import { register, scenes, go } from './router.js';
+import { register, go } from './router.js';
 
 import { title } from './scenes/title.js';
 import { bedroom } from './scenes/bedroom.js';
@@ -17,70 +18,53 @@ import { racks } from './scenes/racks.js';
 import { line } from './scenes/line.js';
 import { end } from './scenes/end.js';
 
-// --- narrative intro -------------------------------------------------
+window.__dbg = { frames: 0, scene: '' };
+
+initTouch();
+
 const intro = makeStory([
-  ['MONDAY MORNING', fmtClock(START)],
-  ["Emmie has to be in line", 'by 7:50 or she is LATE.'],
-  ['The gate opens at 7:35.', 'The first bell rings at 7:47.'],
-  ['Wake up, get ready, and', 'get to class on time!'],
-  [() => `Today ${state.parent} walks with Emmie.`],
+  ['Emmie Goes to School', "It's 6:50 in the morning."],
+  ['Walk with the ARROW KEYS.', 'Press  Z  at the glowing spot.'],
+  ['A yellow arrow always points', 'to the next thing to do.'],
+  [() => `Today ${state.parent} walks with Emmie.`, "Let's have a great morning!"],
 ], () => go('bedroom'));
 
-register('title', title);
-register('intro', intro);
-register('bedroom', bedroom);
-register('leave', leave);
-register('drive', drive);
-register('park', park);
-register('fence', fence);
-register('hallway', hallway);
-register('racks', racks);
-register('line', line);
-register('end', end);
+[['title', title], ['intro', intro], ['bedroom', bedroom], ['leave', leave], ['drive', drive],
+['park', park], ['fence', fence], ['hallway', hallway], ['racks', racks], ['line', line], ['end', end]]
+  .forEach(([n, s]) => register(n, s));
 
-const GAMEPLAY = new Set(['bedroom', 'leave', 'drive', 'park', 'fence', 'hallway', 'racks', 'line']);
-const HINTS = {
-  bedroom: 'Arrows move · hold Z to do a task',
-  leave: 'Arrows walk · Z to act',
-  drive: 'Arrows change lanes',
-  park: 'Up/Space JUMP · Down DUCK',
-  fence: 'Tap Right to stay put',
-  hallway: 'Arrows move · avoid the wet floor',
-  racks: 'Arrows walk · hold Z',
-  line: 'Arrows run to the line',
-};
+const NO_HUD = new Set(['title', 'story', 'end']);
 
-// CRT scanline + vignette overlay drawn every frame
-function crt() {
-  ctx.globalAlpha = 0.10;
-  ctx.fillStyle = '#000';
-  for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
-  ctx.globalAlpha = 1;
-  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, 'rgba(0,0,0,0.45)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+// music / sfx buttons in the page
+function wireButton(id, get, set) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const paint = () => { el.textContent = el.dataset.icon + (get() ? '' : ' off'); el.classList.toggle('off', !get()); };
+  el.addEventListener('click', () => { set(); paint(); });
+  paint();
 }
+wireButton('btn-music', () => settings.music, toggleMusic);
+wireButton('btn-sfx', () => settings.sfx, toggleSfx);
 
-setScene(title);
+// dev helper: ?scene=bedroom jumps straight in; add &auto to autoplay
+const params = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
+const startAt = params.get('scene');
+if (params.has('auto')) globalThis.__EMMIE_AUTOPLAY = true;
+if (startAt && startAt !== 'title') { state.parent = params.get('parent') === 'MOM' ? 'MOM' : 'DAD'; go(startAt); }
+else goScene(title);
 
 startLoop((dt) => {
   updateSceneManager(dt);
   const s = currentScene();
+  window.__dbg.frames++; window.__dbg.scene = s && s.id || '';
   if (s && s.update) s.update(dt);
   updateToasts(dt);
 
   ctx.clearRect(0, 0, W, H);
   if (s && s.draw) s.draw();
-  if (s && GAMEPLAY.has(s.id)) {
-    drawHUD({ label: s.id.toUpperCase(), hint: HINTS[s.id] || '' });
-    drawToasts();
-  }
-  drawWipe();
-  crt();
+  if (s && !NO_HUD.has(s.id)) drawHUD();
+  drawToasts();
+  drawFade();
 });
 
-// tiny boot splash until the first frame paints
-text('LOADING...', W / 2, H / 2, { size: 10, align: 'center', color: '#fff' });
-void scenes;
+void resetRun;

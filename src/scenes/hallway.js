@@ -1,114 +1,66 @@
-// hallway.js — walk through the school to Emmie's classroom. Weave past the
-// morning crowd, a supply cart, and wet-floor puddles.
-import { W, H, rect, text, sfx, input, clamp, rnd, rndi } from '../engine.js';
-import { state, tickClock, isLate, penalty } from '../state.js';
-import { go } from '../router.js';
-import { drawEmmie, drawParent, shadow } from '../sprites.js';
+// hallway.js — walk down the hall to Emmie's classroom cubbies.
+import { W, H, rect, rr, text, rnd, rndi } from '../engine.js';
+import { walkScene, createWorld, painter } from './_kit.js';
+import { state } from '../state.js';
+import * as S from '../sprites.js';
 
-const RATE = 0.4;
-const WORLD_W = 940;
-const TOP = 60, BOT = H - 24;          // walkable band
+const HW = 1400, HH = 300;
+const TOP = 96, BOT = 270;
 
-let em, par, kids, puddles, cart, slipCd, msg;
-
-function reset() {
-  em = { x: 24, y: (TOP + BOT) / 2, f: 1, walk: 0, slow: 0 };
-  par = { x: 6, y: em.y };
-  kids = [];
-  for (let i = 0; i < 9; i++) {
-    kids.push({ x: rnd(140, WORLD_W - 120), y: rnd(TOP + 6, BOT - 6), vx: rnd(-24, 24), vy: rnd(-16, 16), c: ['#e67e22', '#16a085', '#8e44ad', '#2980b9', '#c0392b'][rndi(0, 5)] });
-  }
-  puddles = [{ x: 320, y: TOP + 18 }, { x: 560, y: BOT - 22 }, { x: 740, y: (TOP + BOT) / 2 }];
-  cart = { x: 470, y: (TOP + BOT) / 2, vy: 20 };
-  slipCd = 0;
-  msg = 'Get to the classroom door  ▶   (mind the wet floor)';
-}
-
-export const hallway = {
+export const hallway = walkScene({
   id: 'hallway',
-  enter() { reset(); state.running = true; },
-  update(dt) {
-    tickClock(dt, RATE);
-    slipCd -= dt;
-    em.slow = Math.max(0, em.slow - dt);
-
-    const sp = em.slow > 0 ? 34 : 78;
-    let mvx = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
-    let mvy = (input.down('down') ? 1 : 0) - (input.down('up') ? 1 : 0);
-    em.x = clamp(em.x + mvx * sp * dt, 12, WORLD_W - 20);
-    em.y = clamp(em.y + mvy * sp * dt, TOP + 4, BOT - 4);
-    if (mvx) em.f = mvx > 0 ? 1 : -1;
-    if (mvx || mvy) { em.walk += dt * 10; if (Math.random() < dt * 6) sfx.step(); } else em.walk = 0;
-    par.x += (clamp(em.x - 16, 6, WORLD_W) - par.x) * Math.min(1, dt * 3);
-    par.y += (em.y - par.y) * Math.min(1, dt * 3);
-
-    // kids wander + bump
-    for (const k of kids) {
-      k.x += k.vx * dt; k.y += k.vy * dt;
-      if (k.x < 120 || k.x > WORLD_W - 20) k.vx *= -1;
-      if (k.y < TOP + 4 || k.y > BOT - 4) k.vy *= -1;
-      if (rnd() < dt) { k.vx = rnd(-24, 24); k.vy = rnd(-16, 16); }
-      if (Math.hypot(k.x - em.x, k.y - em.y) < 12) {
-        const a = Math.atan2(em.y - k.y, em.x - k.x);
-        em.x += Math.cos(a) * 30 * dt; em.y += Math.sin(a) * 30 * dt;
-        if (em.slow <= 0) { sfx.bump(); em.slow = 0.35; }
-      }
-    }
-    // cart
-    cart.y += cart.vy * dt;
-    if (cart.y < TOP + 12 || cart.y > BOT - 12) cart.vy *= -1;
-    if (Math.abs(cart.x - em.x) < 16 && Math.abs(cart.y - em.y) < 14) {
-      em.x += (em.x < cart.x ? -1 : 1) * 40 * dt;
-      if (em.slow <= 0) { sfx.bump(); em.slow = 0.4; msg = 'Excuse me, cart coming through!'; }
-    }
-    // puddles
-    for (const p of puddles) {
-      if (slipCd <= 0 && Math.hypot(p.x - em.x, p.y - em.y) < 12) {
-        slipCd = 2; em.slow = 0.6; sfx.error();
-        if (penalty(1, 'SLIPPED  +1 MIN')) return go('end', { win: false, reason: 'One slip too many in the hallway.' });
-        msg = 'Whoa — slow down on the wet floor!';
-      }
-    }
-
-    if (isLate()) return go('end', { win: false, reason: 'Lost in the hallway when class started.' });
-    if (em.x >= WORLD_W - 24) return go('racks');
+  title: 'Down the Hall',
+  next: 'racks',
+  endText: 'Almost there  ▶',
+  build() {
+    const world = createWorld({
+      w: HW, h: HH, start: { x: 40, y: (TOP + BOT) / 2 }, speed: 104,
+      solids: [
+        { x: 0, y: 0, w: HW, h: TOP - 6 },
+        { x: 0, y: BOT + 6, w: HW, h: HH },
+        { x: 640, y: 150, w: 30, h: 26 },       // custodian cart
+      ],
+    });
+    const kids = [];
+    for (let i = 0; i < 6; i++) kids.push({ x: rnd(200, HW - 200), y: rnd(TOP + 14, BOT - 14), vx: rnd(-20, 20), vy: rnd(-14, 14), c: ['#e6883c', '#3ca0a0', '#a05ac0', '#5a8ad0'][rndi(0, 4)], anim: rnd(0, 6) });
+    const C = {
+      world, kids,
+      steps: [
+        { label: 'find your classroom', objective: 'Walk down the hall to Room 3', x: undefined, delay: 1.2 },
+        { label: 'reach your cubby', objective: 'Go to your classroom cubbies  ▶', x: 1340, y: (TOP + BOT) / 2, radius: 42, hold: 0.2 },
+      ],
+      tick(dt) {
+        for (const k of kids) {
+          k.x += k.vx * dt; k.y += k.vy * dt; k.anim += dt * 6;
+          if (k.x < 150 || k.x > HW - 120) k.vx *= -1;
+          if (k.y < TOP + 10 || k.y > BOT - 10) k.vy *= -1;
+          if (Math.random() < dt * 0.5) { k.vx = rnd(-20, 20); k.vy = rnd(-14, 14); }
+          const dx = k.x - world.em.x, dy = k.y - world.em.y, d = Math.hypot(dx, dy);
+          if (d < 16 && d > 0) { world.em.x -= dx / d * 24 * dt; world.em.y -= dy / d * 24 * dt; }
+        }
+      },
+    };
+    return C;
   },
-  draw() {
-    const camX = clamp(em.x - W / 2, 0, WORLD_W - W);
-    rect(0, 0, W, H, '#d8d2c0');
-    rect(0, 0, W, TOP - 6, '#b7b09a');                 // upper wall
-    rect(0, TOP - 6, W, 3, '#8a8470');
-    rect(0, BOT, W, H - BOT, '#9a9482');
-    // floor tiles
-    for (let x = -(camX % 32); x < W; x += 32) rect(x, TOP - 3, 1, BOT - TOP + 3, '#00000012');
-    for (let y = TOP; y < BOT; y += 24) rect(0, y, W, 1, '#00000010');
-    // lockers on upper wall
-    for (let x = -(camX % 24); x < W; x += 24) { rect(x + 2, 10, 20, 40, '#7c8a99'); rect(x + 4, 12, 16, 8, '#65727f'); }
-    // door numbers along the way
-    for (const dx of [200, 400, 600]) { const sxp = dx - camX; if (sxp > -20 && sxp < W) { rect(sxp, TOP - 6, 24, 6, '#5b3a1e'); } }
-    // classroom at the end
-    const endS = (WORLD_W - 14) - camX;
-    rect(endS - 18, TOP - 8, 26, BOT - TOP + 8, '#5b3a1e');
-    rect(endS - 14, TOP + 2, 18, 26, '#9aa7d6');
-    text('EMMIE\'S', endS - 5, 8, { size: 6, align: 'center', color: '#2a2' });
-    text('CLASS', endS - 5, 16, { size: 6, align: 'center', color: '#2a2' });
+  drawScene(C, t, idx) {
+    const wd = C.world, SX = wd.sx, SY = wd.sy;
+    const p = painter();
+    p.bg(() => {
+      rect(0, 0, W, H, '#e7e0cf');
+      rr(SX(0), SY(TOP - 6), HW, BOT - TOP + 12, 0, '#d8cdb2');   // floor band
+      for (let x = -(wd.cam.x % 40); x < W; x += 40) rect(x, SY(TOP), 1, BOT - TOP, 'rgba(0,0,0,0.05)');
+      rr(SX(0), SY(-10), HW, TOP + 4, 0, '#cdbf9c');             // upper wall
+    });
+    p.add(TOP, () => S.drawLockers(SX(20), SY(TOP - 4), HW - 40));
+    [[220, 'ROOM 1'], [520, 'ROOM 2'], [820, 'ART'], [1100, 'GYM']].forEach(([dx, lb]) => p.add(TOP + 1, () => S.drawClassDoor(SX(dx), SY(TOP - 2), lb)));
+    p.add(150, () => S.drawCart(SX(655), SY(176)));
+    p.add(BOT, () => S.drawTrashCan(SX(1000), SY(BOT)));
+    p.add(TOP + 2, () => { rr(SX(1300), SY(TOP - 2), 80, 40, 4, '#f4f0e4'); text('ROOM 3', SX(1340), SY(TOP + 6), { size: 10, align: 'center', color: '#2a7d46', weight: '700' }); });
 
-    for (const p of puddles) { const x = p.x - camX; rect(x - 8, p.y - 4, 16, 8, '#7fc9e8'); rect(x + 6, p.y - 12, 8, 12, '#f1c40f'); rect(x + 6, p.y - 12, 8, 4, '#000'); }
-    for (const k of kids) { const x = k.x - camX; if (x < -20 || x > W + 20) continue; shadow(x, k.y + 8, 7); drawEmmie(x, k.y, { facing: k.vx > 0 ? 1 : -1, frame: (k.x / 6 | 0) % 2, hoodie: k.c }); }
-
-    const cx = cart.x - camX;
-    shadow(cx, cart.y + 8, 12);
-    rect(cx - 10, cart.y - 8, 20, 16, '#95a5a6'); rect(cx - 10, cart.y - 8, 20, 4, '#bdc3c7');
-    rect(cx - 9, cart.y + 8, 3, 3, '#333'); rect(cx + 6, cart.y + 8, 3, 3, '#333');
-
-    shadow(par.x - camX, par.y + 10);
-    drawParent(par.x - camX, par.y - 6, { type: state.parent, facing: em.f, frame: (em.walk | 0) % 2 });
-    shadow(em.x - camX, em.y + 8);
-    drawEmmie(em.x - camX, em.y - 6, { facing: em.f, frame: (em.walk | 0) % 2 });
-    if (em.slow > 0) text('!', em.x - camX, em.y - 22, { size: 6, align: 'center', color: '#ff5a5a' });
-
-    rect(8, 20, W - 16, 4, '#000');
-    rect(8, 20, (W - 16) * clamp(em.x / (WORLD_W - 24), 0, 1), 4, '#7CFC00');
-    if (msg) text(msg, W / 2, H - 12, { size: 7, align: 'center', color: '#ffe066' });
+    for (const k of C.kids) p.add(k.y, () => S.drawKid(SX(k.x), SY(k.y), { color: k.c, dir: k.vx > 0 ? 'right' : 'left', anim: k.anim, moving: true }));
+    p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: '#7b3ff2' }));
+    p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 24), SY(wd.em.y + 8), { dir: wd.em.dir === 'left' ? 'left' : 'right', anim: t * 3, moving: wd.em.moving }));
+    p.flush();
+    void idx;
   },
-};
+});

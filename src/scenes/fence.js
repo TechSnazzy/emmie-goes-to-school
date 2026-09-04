@@ -1,99 +1,77 @@
-// fence.js — the school gate is locked until ~7:35 when a staff member unlocks it.
-// While you wait, keep Emmie from wandering off to play with a friend.
-import { W, H, rect, text, sfx, input, clamp } from '../engine.js';
-import { state, tickClock, isLate, penalty, FENCE_OPEN, fmtClock } from '../state.js';
-import { go } from '../router.js';
-import { drawEmmie, drawParent, drawFence, drawSchoolWall, shadow } from '../sprites.js';
+// fence.js — the school gate is closed. Wait for a grown-up to open it, then
+// walk through. (Pet the puppy while you wait!)
+import { W, H, rect, rr, text, lerp } from '../engine.js';
+import { walkScene, createWorld, painter } from './_kit.js';
+import { sfx } from '../audio.js';
+import { state } from '../state.js';
+import * as S from '../sprites.js';
 
-const RATE_WAIT = 0.95;         // clock moves briskly while waiting
-const RATE_WALK = 0.5;
-const SPOT = 150;               // where Emmie should wait
-const GATE_X = 300;
+const GW = 720, GH = 340;
+const GATE = { x: 380, y: 210 };
 
-let em, phase, staffX, unlockT, msg, friendWave, strayCd;
-
-function reset() {
-  em = { x: SPOT, f: 1, drift: 0, walk: 0 };
-  phase = state.clock >= FENCE_OPEN ? 'unlocking' : 'wait';
-  staffX = W + 30;
-  unlockT = 0;
-  friendWave = 0;
-  strayCd = 0;
-  msg = phase === 'wait' ? 'Gate is locked. Tap  ▶  to stay with your grown-up.' : 'Someone is coming to open the gate...';
-}
-
-export const fence = {
+export const fence = walkScene({
   id: 'fence',
-  enter() { reset(); state.running = true; },
-  update(dt) {
-    friendWave += dt * 4;
-    strayCd -= dt;
-
-    if (phase === 'wait') {
-      tickClock(dt, RATE_WAIT);
-      // Emmie drifts toward the friend on the left; player pulls her back
-      em.drift += dt * 10;
-      if (input.pressed('right') || input.pressed('act')) { em.drift -= 7; sfx.move(); }
-      em.drift = clamp(em.drift, 0, 40);
-      em.x = SPOT - em.drift;
-      em.f = (input.down('right') || input.down('act')) ? 1 : -1;
-      em.walk += dt * 8;
-      if (em.drift >= 40 && strayCd <= 0) {
-        strayCd = 3;
-        if (penalty(2, 'WANDERED OFF  +2 MIN')) return go('end', { win: false, reason: 'Off playing with a friend when the bell rang.' });
-        em.drift = 12;
-        msg = 'Come back! Stay by your grown-up.';
-      }
-      if (state.clock >= FENCE_OPEN) { phase = 'unlocking'; staffX = W + 30; msg = 'The gate is opening!'; }
-    } else if (phase === 'unlocking') {
-      tickClock(dt, RATE_WALK);
-      staffX += (GATE_X + 26 - staffX) * Math.min(1, dt * 2.2);
-      if (staffX < GATE_X + 34) {
-        unlockT += dt;
-        if (Math.random() < dt * 6) sfx.tick();
-        if (unlockT > 1.2) { phase = 'open'; sfx.good(); msg = 'Walk through!  ▶'; }
-      }
-    } else if (phase === 'open') {
-      tickClock(dt, RATE_WALK);
-      const mv = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
-      em.x = clamp(em.x + mv * 74 * dt, 40, W + 10);
-      if (mv) { em.f = mv > 0 ? 1 : -1; em.walk += dt * 10; sfx.step(); }
-      if (em.x > GATE_X + 30) return go('hallway');
-    }
-
-    if (isLate()) return go('end', { win: false, reason: 'Still outside the gate when class started.' });
+  title: 'The School Gate',
+  next: 'hallway',
+  endText: 'Into the school  ▶',
+  build() {
+    const world = createWorld({
+      w: GW, h: GH, start: { x: 60, y: 250 }, speed: 100,
+      solids: [
+        { x: 0, y: 0, w: GW, h: 150 },
+        { x: 0, y: 322, w: GW, h: 18 },
+        { x: 150, y: 176, w: 210, h: 8 },       // closed gate rail (removed when open)
+        { x: 420, y: 150, w: GW, h: 60 },       // fence right of gate
+      ],
+    });
+    const C = {
+      world, staff: { x: GW + 40, y: 150 }, gateOpen: 0, puppy: { x: 120, y: 285, wag: 0, pet: 0 },
+      locked: (idx) => idx === 0 && C.gateOpen < 0.9,
+      steps: [
+        {
+          label: 'wait for the gate', objective: 'The gate is locked — wait for a grown-up',
+          x: undefined, delay: 3.2,
+          onDone: () => { world.setSolids([{ x: 0, y: 0, w: GW, h: 150 }, { x: 0, y: 322, w: GW, h: 18 }, { x: 420, y: 150, w: GW, h: 60 }]); },
+        },
+        { label: 'walk through', objective: 'Walk through the open gate  ▶', x: GATE.x, y: 250, radius: 40, hold: 0.2, toast: 'Good morning!' },
+      ],
+      tick(dt, t, idx) {
+        C.puppy.wag += dt * 12;
+        if (C.puppy.pet > 0) C.puppy.pet -= dt;
+        if (Math.hypot(C.puppy.x - world.em.x, C.puppy.y - world.em.y) < 26 && (!C._pT || C._pT > 0.7)) { C._pT = 0; C.puppy.pet = 1; sfx.purr(); }
+        C._pT = (C._pT || 0) + dt;
+        // staff walks over and opens the gate during step 0
+        if (idx === 0) {
+          C.staff.x = lerp(C.staff.x, GATE.x + 60, Math.min(1, dt * 1.4));
+          if (C.staff.x < GATE.x + 90) { C.gateOpen = Math.min(1, C.gateOpen + dt * 1.1); if (C.gateOpen > 0.02 && C.gateOpen < 0.1) sfx.knock(); }
+        } else {
+          C.staff.x = lerp(C.staff.x, GATE.x + 100, Math.min(1, dt * 1.2));
+        }
+      },
+    };
+    return C;
   },
-  draw() {
-    rect(0, 0, W, H, '#a9d3e8');
-    rect(0, H - 40, W, 40, '#7a8a5a');                       // grass strip
-    rect(GATE_X + 40, 30, W - GATE_X - 40, H - 70, undefined);
-    drawSchoolWall(GATE_X + 44, 40, W - GATE_X - 44, H - 80);
-    text('SCHOOL', GATE_X + 90, 52, { size: 8, color: '#fff' });
-    // sidewalk
-    rect(0, H - 30, W, 12, '#b9bec4');
-    // fence + gate
-    for (let x = 0; x < GATE_X; x += 44) drawFence(x, H - 30, 40, false);
-    drawFence(GATE_X, H - 30, 40, phase === 'open');
-    if (phase !== 'open') { rect(GATE_X + 2, H - 68, 40, 40, '#8d99ae'); rect(GATE_X + 18, H - 50, 6, 8, phase === 'unlocking' ? '#ffe066' : '#444'); }
+  drawScene(C, t, idx) {
+    const wd = C.world, SX = wd.sx, SY = wd.sy;
+    const p = painter();
+    p.bg(() => {
+      rect(0, 0, W, H, '#bfe3f2');
+      S.ground(S.PAL.grass, S.PAL.grassD, 40, wd.cam.x, wd.cam.y, W, H);
+      rr(SX(-20), SY(228), GW + 40, 60, 0, '#c3c8cc');    // sidewalk to gate
+    });
+    p.add(120, () => { S.drawSchoolBuilding(SX(120), SY(150), 460, 120); });
+    p.add(118, () => S.drawFlagpole(SX(70), SY(150)));
+    p.add(150, () => { for (let fx = -10; fx < 150; fx += 44) S.drawFence(SX(fx), SY(184), 44); });
+    p.add(150, () => { for (let fx = 420; fx < GW + 20; fx += 44) S.drawFence(SX(fx), SY(184), 44); });
+    p.add(151, () => S.drawGate(SX(GATE.x - 40), SY(184), C.gateOpen));
+    p.add(150, () => S.drawBush(SX(300), SY(150)));
+    p.add(C.puppy.y, () => S.drawDog(SX(C.puppy.x), SY(C.puppy.y), { dir: 'right' }));
+    p.add(C.staff.y + 40, () => S.drawTeacher(SX(C.staff.x), SY(C.staff.y + 40), { dir: 'left', anim: t * 4, moving: idx === 0 && C.staff.x > GATE.x + 62 }));
+    p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving, backpack: '#7b3ff2' }));
+    p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 26), SY(wd.em.y + 8), { dir: 'right', anim: t * 3, moving: wd.em.moving }));
+    p.flush();
 
-    // friend on the left (playground)
-    const fx = 24 + Math.sin(friendWave) * 2;
-    drawEmmie(fx, H - 30, { facing: 1, frame: (friendWave | 0) % 2, hoodie: '#4caf50' });
-    if (phase === 'wait') text('come play!', fx, H - 58, { size: 6, align: 'center', color: '#2a6' });
-
-    // staff member
-    if (phase === 'unlocking' || phase === 'open') {
-      shadow(staffX, H - 22);
-      drawParent(staffX, H - 42, { type: 'MOM', facing: -1, frame: (unlockT * 6 | 0) % 2 });
-      rect(staffX - 8, H - 50, 6, 4, '#ffe066'); // hi-vis vest hint
-    }
-
-    shadow(em.x + 22, H - 22);
-    drawParent(em.x + 22, H - 42, { type: state.parent, facing: -1, frame: 0 });
-    shadow(em.x, H - 22);
-    drawEmmie(em.x, H - 30, { facing: em.f, frame: (em.walk | 0) % 2 });
-
-    text('GATE OPENS ~' + fmtClock(FENCE_OPEN).replace(' AM', ''), W / 2, 24, { size: 7, align: 'center', color: '#0a4a63' });
-    if (msg) text(msg, W / 2, H - 12, { size: 7, align: 'center', color: '#ffe066' });
+    if (C.puppy.pet > 0) text('♥', SX(C.puppy.x), SY(C.puppy.y - 22 - (1 - C.puppy.pet) * 12), { size: 12, align: 'center', color: '#ff6ea8' });
+    if (idx === 0) text('Pet the puppy while you wait 🐶', W / 2, H - 26, { size: 11, align: 'center', color: '#2a3a4a', weight: '700' });
   },
-};
+});

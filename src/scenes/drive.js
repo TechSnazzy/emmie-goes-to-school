@@ -1,90 +1,72 @@
-// drive.js — drive the white Model Y to the park. Dodge morning traffic.
-import { W, H, rect, text, sfx, input, clamp, rnd, rndi, chance } from '../engine.js';
-import { state, tickClock, isLate, penalty } from '../state.js';
+// drive.js — a gentle top-down drive to the park. You can't crash; bumping a
+// car just goes "beep beep". Steer with the arrow keys.
+import { W, H, ctx, rect, rr, text, clamp, rnd, chance, input } from '../engine.js';
+import { state, tickProgress, setScene, setObjective, toast } from '../state.js';
+import { sfx } from '../audio.js';
 import { go } from '../router.js';
-import { drawTesla, shadow } from '../sprites.js';
+import * as S from '../sprites.js';
 
-const RATE = 0.5;
-const GOAL = 100;                       // "distance" to the park
-const ROAD_X = 96, ROAD_W = 288;
-const LANES = [ROAD_X + 48, ROAD_X + 144, ROAD_X + 240];
+const ROAD_X = 150, ROAD_W = 340;
+const GOAL = 100;
 
-let carX, carLane, cars, dist, dashes, hitCd, shake, msg;
+let t, carX, carScreenY, dist, cars, scroll, msgT, beepCd;
 
 function reset() {
-  carLane = 1;
-  carX = LANES[1];
-  cars = [];
-  dist = 0;
-  dashes = 0;
-  hitCd = 0;
-  shake = 0;
-  msg = '◀ ▶  change lanes';
+  t = 0; carX = W / 2; carScreenY = H - 90; dist = 0; cars = []; scroll = 0; msgT = 0; beepCd = 0;
+  setScene('Driving to School', [{ label: 'reach the park', done: false }]);
 }
 
 export const drive = {
   id: 'drive',
-  enter() { reset(); state.running = true; sfx.engine(); },
+  enter() { reset(); state.running = true; sfx.car(); },
   update(dt) {
-    tickClock(dt, RATE);
-    dist += dt * (GOAL / 19);           // ~19s clean run
-    dashes += dt * 220;
-    hitCd -= dt; shake *= 0.9;
+    t += dt; tickProgress(dt); msgT += dt; beepCd -= dt;
+    setObjective('Drive to the park — steer with ◀ ▶');
+    dist += dt * (GOAL / 15);
+    scroll = (scroll + dt * 150) % 48;
 
-    if (input.pressed('left') && carLane > 0) { carLane--; sfx.move(); }
-    if (input.pressed('right') && carLane < 2) { carLane++; sfx.move(); }
-    carX += (LANES[carLane] - carX) * Math.min(1, dt * 12);
+    const spd = 150;
+    if (input.down('left')) carX -= spd * dt;
+    if (input.down('right')) carX += spd * dt;
+    carX = clamp(carX, ROAD_X + 24, ROAD_X + ROAD_W - 24);
 
-    // spawn traffic
-    if (chance(dt * 1.6)) {
-      const lane = rndi(0, 3);
-      if (!cars.some((c) => c.lane === lane && c.y < 30)) {
-        cars.push({ lane, x: LANES[lane], y: -40, vy: rnd(70, 130), c: ['#c0392b', '#2980b9', '#f1c40f', '#7f8c8d', '#27ae60'][rndi(0, 5)] });
-      }
+    if (chance(dt * 1.1) && cars.length < 4) {
+      const lane = ROAD_X + 50 + rnd(0, ROAD_W - 100);
+      cars.push({ x: lane, y: -60, v: rnd(38, 70), c: ['#c94f4f', '#4f7fc9', '#e0b24d', '#5aa66a'][(Math.random() * 4) | 0] });
     }
-    const carY = H - 44;
     for (const c of cars) {
-      c.y += (c.vy + dist * 0.4) * dt;
-      if (hitCd <= 0 && Math.abs(c.x - carX) < 24 && Math.abs(c.y - carY) < 28) {
-        hitCd = 1.1; shake = 6;
-        sfx.bump();
-        if (penalty(2, 'FENDER BENDER  +2 MIN')) return go('end', { win: false, reason: 'Stuck in traffic after a bump. Class had started.' });
-        msg = 'watch the other cars!';
+      c.y += (c.v + dist * 0.3) * dt;
+      if (beepCd <= 0 && Math.abs(c.x - carX) < 34 && Math.abs(c.y - carScreenY) < 46) {
+        beepCd = 1.2; sfx.beep(); toast('beep beep!', '#ffe066');
+        carX += carX < c.x ? -20 : 20;
+        carX = clamp(carX, ROAD_X + 24, ROAD_X + ROAD_W - 24);
       }
     }
-    for (let i = cars.length - 1; i >= 0; i--) if (cars[i].y > H + 40) cars.splice(i, 1);
+    for (let i = cars.length - 1; i >= 0; i--) if (cars[i].y > H + 60) cars.splice(i, 1);
 
-    if (isLate()) return go('end', { win: false, reason: 'Still driving when the school bell rang.' });
-    if (dist >= GOAL) return go('park');
+    if (dist >= GOAL) { toast('We are here!', '#8fe07a'); go('park'); }
   },
   draw() {
-    rect(0, 0, W, H, '#3a4a3a');
-    // grass texture
-    for (let i = 0; i < 40; i++) rect((i * 53) % W, (i * 71 + (dist * 6 | 0)) % H, 2, 4, '#33422f');
-    const sx = shake ? rnd(-shake, shake) : 0;
-    rect(ROAD_X + sx, 0, ROAD_W, H, '#3b3b42');
-    rect(ROAD_X + sx, 0, 3, H, '#e8e8e8');
-    rect(ROAD_X + ROAD_W - 3 + sx, 0, 3, H, '#e8e8e8');
-    for (const cx of [ROAD_X + 96, ROAD_X + 192]) {
-      for (let y = -40; y < H; y += 40) rect(cx + sx, y + (dashes % 40), 3, 20, '#f1c40f');
-    }
+    rect(0, 0, W, H, S.PAL.grass);
+    for (let i = 0; i < 12; i++) rect((i * 90 + (scroll * 3 | 0)) % W, (i * 57) % H, 3, 6, S.PAL.grassD);
+    // road
+    rr(ROAD_X, -10, ROAD_W, H + 20, 0, '#42474e');
+    rect(ROAD_X - 6, 0, 6, H, '#dfe3e8'); rect(ROAD_X + ROAD_W, 0, 6, H, '#dfe3e8');
+    for (let y = -48; y < H; y += 48) { rect(ROAD_X + ROAD_W / 3 - 3, y + scroll, 5, 26, '#f2d24d'); rect(ROAD_X + ROAD_W * 2 / 3 - 3, y + scroll, 5, 26, '#f2d24d'); }
+    // roadside
+    S.drawTree(ROAD_X - 60, (60 + scroll * 4) % (H + 120), 0.8);
+    S.drawTree(ROAD_X + ROAD_W + 70, (200 + scroll * 4) % (H + 120), 0.9);
 
-    for (const c of cars) {
-      shadow(c.x + sx, c.y + 16, 16);
-      rect(c.x - 12 + sx, c.y - 16, 24, 34, c.c);
-      rect(c.x - 9 + sx, c.y - 10, 18, 10, '#243');
-      rect(c.x - 9 + sx, c.y + 6, 18, 6, '#111');
-      rect(c.x - 11 + sx, c.y - 16, 22, 3, '#111');
-    }
-
-    const carY = H - 44;
-    shadow(carX + sx, carY + 18, 20);
-    if (hitCd > 0 && (hitCd * 12 | 0) % 2) { /* blink */ } else drawTesla(carX + sx, carY, { facing: 1 });
+    for (const c of cars) S.drawCar(c.x, c.y, c.c, { dir: 'down' });
+    S.drawTesla(carX, carScreenY, { dir: 'up' });
+    // a little family in the windshield
+    ctx.fillStyle = '#3a2a2a';
+    ctx.fillRect(carX - 10, carScreenY - 40, 6, 6); ctx.fillRect(carX + 4, carScreenY - 40, 6, 6);
 
     // progress
-    rect(8, 22, 10, H - 44, '#000');
-    rect(8, 22 + (H - 44) * (1 - clamp(dist / GOAL, 0, 1)), 10, 4, '#7CFC00');
-    text('PARK', 6, H - 20, { size: 6, color: '#7CFC00' });
-    if (msg) text(msg, W / 2, H - 12, { size: 7, align: 'center', color: '#ffe066' });
+    rr(20, H / 2 - 70, 10, 140, 5, 'rgba(0,0,0,0.3)');
+    rr(20, H / 2 - 70 + 140 * (1 - clamp(dist / GOAL, 0, 1)), 10, 8, 4, '#8fe07a');
+    text('PARK', 14, H / 2 + 74, { size: 9, color: '#2a3a2a', weight: '700' });
+    if (msgT < 3) text('Hold ◀ or ▶ to steer. You can\'t crash — have fun!', W / 2, H - 24, { size: 11, align: 'center', color: '#fff', weight: '700' });
   },
 };

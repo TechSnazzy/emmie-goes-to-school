@@ -1,95 +1,67 @@
-// line.js — the final dash. Get in line before the 7:50 bell. Then the teacher
-// comes out to say good morning.
-import { W, H, rect, text, sfx, input, clamp, rnd, rndi } from '../engine.js';
-import { state, tickClock, isLate, FIRST_BELL } from '../state.js';
-import { go } from '../router.js';
-import { drawEmmie, drawParent, drawSchoolWall, shadow } from '../sprites.js';
+// line.js — line up in the schoolyard. The teacher comes out to say hello.
+import { W, H, rect, rr, text, lerp, rndi } from '../engine.js';
+import { walkScene, createWorld, painter } from './_kit.js';
+import { sfx } from '../audio.js';
+import { state } from '../state.js';
+import * as S from '../sprites.js';
 
-const RATE = 0.55;
-const TOP = 70, BOT = H - 20;
-const LINE_X = W - 60;
+const YW = 720, YH = 320;
+const LINE = { x: 540, y: 150 };
 
-let em, kids, lineKids, phase, teacherX, bannerT, msg, bellRung;
-
-function reset() {
-  em = { x: 20, y: (TOP + BOT) / 2, f: 1, walk: 0 };
-  kids = [];
-  for (let i = 0; i < 5; i++) kids.push({ x: rnd(90, LINE_X - 30), y: rnd(TOP + 6, BOT - 6), vy: rnd(-40, 40), c: ['#e67e22', '#16a085', '#8e44ad', '#2980b9'][rndi(0, 4)] });
-  lineKids = 4;
-  phase = 'run';
-  teacherX = W + 20;
-  bannerT = 0;
-  bellRung = state.clock >= FIRST_BELL;
-  msg = 'RUN!  ▶  Get in line before 7:50!';
-}
-
-export const line = {
+export const line = walkScene({
   id: 'line',
-  enter() { reset(); state.running = true; },
-  update(dt) {
-    if (phase === 'run') {
-      tickClock(dt, RATE);
-      if (!bellRung && state.clock >= FIRST_BELL) { bellRung = true; sfx.bell(); }
-      let mvx = (input.down('right') ? 1 : 0) - (input.down('left') ? 1 : 0);
-      let mvy = (input.down('down') ? 1 : 0) - (input.down('up') ? 1 : 0);
-      em.x = clamp(em.x + mvx * 96 * dt, 10, LINE_X);
-      em.y = clamp(em.y + mvy * 96 * dt, TOP + 4, BOT - 4);
-      if (mvx) em.f = mvx > 0 ? 1 : -1;
-      if (mvx || mvy) { em.walk += dt * 12; if (Math.random() < dt * 8) sfx.step(); } else em.walk = 0;
-
-      for (const k of kids) {
-        k.y += k.vy * dt;
-        if (k.y < TOP + 4 || k.y > BOT - 4) k.vy *= -1;
-        if (Math.hypot(k.x - em.x, k.y - em.y) < 12) {
-          const a = Math.atan2(em.y - k.y, em.x - k.x);
-          em.x += Math.cos(a) * 44 * dt; em.y += Math.sin(a) * 44 * dt;
-          sfx.bump();
+  title: 'Line Up!',
+  next: 'end',
+  endText: '',
+  endHold: 3.2,
+  build() {
+    const world = createWorld({
+      w: YW, h: YH, start: { x: 40, y: 250 }, speed: 108,
+      solids: [{ x: 0, y: 0, w: YW, h: 90 }, { x: 0, y: YH - 8, w: YW, h: 8 }],
+    });
+    const C = {
+      world, teacher: { x: YW + 30, y: 110 }, greet: 0,
+      steps: [
+        { label: 'get in line', objective: 'Get in line with your class!', x: LINE.x, y: LINE.y + 40, radius: 40, hold: 0.3, toast: 'You made it! 🎉', onDone: () => { sfx.confirm(); } },
+      ],
+      tick(dt, t, idx) {
+        if (idx >= C.steps.length) {
+          C.greet += dt;
+          C.teacher.x = lerp(C.teacher.x, LINE.x + 70, Math.min(1, dt * 1.6));
+          if (C.greet > 0.6 && C.greet < 0.7) sfx.win();
         }
-      }
-      if (em.x >= LINE_X - 2) { phase = 'inline'; sfx.good(); state.running = false; msg = 'Made it! Here comes the teacher...'; }
-      if (isLate()) return go('end', { win: false, reason: 'The 7:50 bell rang before Emmie reached the line.' });
-    } else if (phase === 'inline') {
-      teacherX += (LINE_X - 40 - teacherX) * Math.min(1, dt * 2);
-      bannerT += dt;
-      if (bannerT > 1.6) { phase = 'greet'; bannerT = 0; sfx.win(); }
-    } else if (phase === 'greet') {
-      bannerT += dt;
-      if (bannerT > 2 || input.pressed('act')) return go('end', { win: true });
+      },
+    };
+    return C;
+  },
+  drawScene(C, t, idx) {
+    const wd = C.world, SX = wd.sx, SY = wd.sy;
+    const p = painter();
+    p.bg(() => {
+      rect(0, 0, W, H, '#bfe3f2');
+      S.ground('#8a8f95', '#7c8187', 44, wd.cam.x, wd.cam.y, W, H);   // blacktop
+      rr(SX(-20), SY(84), YW + 40, 8, 0, S.PAL.grassD);
+      // painted line markings
+      for (let i = 0; i < 7; i++) rr(SX(LINE.x + 26), SY(LINE.y - 10 + i * 22), 14, 4, 2, '#f2d24d');
+      text('LINE UP', SX(LINE.x + 33), SY(LINE.y - 34), { size: 10, align: 'center', color: '#f2d24d', weight: '700' });
+    });
+    p.add(84, () => S.drawSchoolBuilding(SX(110), SY(90), 430, 74));
+    p.add(83, () => S.drawFlagpole(SX(74), SY(90)));
+    p.add(60, () => S.drawCloud(SX(260), SY(46), 1));
+    // kids already in line
+    for (let i = 0; i < 4; i++) p.add(LINE.y + i * 20, () => S.drawKid(SX(LINE.x), SY(LINE.y + i * 20), { color: ['#e6883c', '#3ca0a0', '#a05ac0', '#5a8ad0'][i], dir: 'up', anim: t * 3 + i, moving: false }));
+    if (idx >= C.steps.length) p.add(LINE.y + 80, () => S.drawEmmie(SX(LINE.x), SY(LINE.y + 80), { dir: 'up', anim: 0, moving: false, backpack: null }));
+    else {
+      p.add(wd.em.y, () => S.drawEmmie(SX(wd.em.x), SY(wd.em.y), { dir: wd.em.dir, anim: wd.em.anim, moving: wd.em.moving }));
+      p.add(wd.em.y - 1, () => S.drawParentBy(state.parent, SX(wd.em.x - 24), SY(wd.em.y + 8), { dir: 'right', anim: t * 3, moving: wd.em.moving }));
+    }
+    p.add(C.teacher.y + 44, () => S.drawTeacher(SX(C.teacher.x), SY(C.teacher.y + 44), { dir: 'left', anim: t * 4, moving: idx >= C.steps.length && C.teacher.x > LINE.x + 74 }));
+    p.flush();
+
+    if (idx >= C.steps.length && C.greet > 0.5) {
+      const bx = W / 2;
+      rr(bx - 150, 60, 300, 40, 12, 'rgba(28,22,38,0.85)');
+      text('"Good morning, Emmie!"', bx, 70, { size: 15, align: 'center', color: '#8fe07a', weight: '700' });
     }
   },
-  draw() {
-    rect(0, 0, W, H, '#aacbe0');
-    drawSchoolWall(0, 0, W, TOP - 8);
-    rect(0, TOP - 8, W, 3, '#8a6a48');
-    rect(0, BOT, W, H - BOT, '#7fae5a');                // grass
-    rect(0, BOT - 2, W, 3, '#6c9a4c');
-    // blacktop
-    rect(0, TOP - 5, W, BOT - TOP + 3, '#6f6f77');
-    // the line markings
-    for (let i = 0; i < 6; i++) rect(LINE_X + 6, TOP + 6 + i * 18, 10, 3, '#f1c40f');
-    text('LINE UP HERE', LINE_X + 2, TOP - 4, { size: 6, align: 'center', color: '#ffe' });
-
-    // kids already lined up
-    for (let i = 0; i < lineKids; i++) drawEmmie(LINE_X + 10, TOP + 14 + i * 18, { facing: -1, frame: (bannerT * 6 + i | 0) % 2, hoodie: ['#e67e22', '#16a085', '#8e44ad', '#2980b9'][i % 4] });
-    if (phase !== 'run') drawEmmie(LINE_X + 10, TOP + 14 + lineKids * 18, { facing: -1, frame: 0 });
-
-    // milling kids
-    for (const k of kids) { if (phase !== 'run') break; shadow(k.x, k.y + 8, 7); drawEmmie(k.x, k.y, { facing: k.vy > 0 ? 1 : -1, frame: (k.y / 6 | 0) % 2, hoodie: k.c }); }
-
-    // teacher
-    if (phase !== 'run') { shadow(teacherX, TOP + 40); drawParent(teacherX, TOP + 20, { type: 'MOM', facing: 1, frame: (bannerT * 6 | 0) % 2 }); }
-
-    // parent + Emmie
-    const showEm = phase === 'run';
-    shadow(em.x - 16, em.y + 8);
-    drawParent(em.x - 16, em.y - 8, { type: state.parent, facing: em.f, frame: (em.walk | 0) % 2 });
-    if (showEm) { shadow(em.x, em.y + 8); drawEmmie(em.x, em.y - 6, { facing: em.f, frame: (em.walk | 0) % 2 }); }
-
-    if (phase === 'greet') {
-      rect(0, H / 2 - 16, W, 32, 'rgba(0,0,0,0.6)');
-      text('"Good morning, Emmie!"', W / 2, H / 2 - 6, { size: 9, align: 'center', color: '#7CFC00' });
-    }
-    if (bellRung && phase === 'run' && (state.clock * 5 | 0) % 2) text('▶▶ BELL! ◀◀', W / 2, TOP + 6, { size: 9, align: 'center', color: '#ff3b3b' });
-    if (msg) text(msg, W / 2, H - 12, { size: 7, align: 'center', color: '#ffe066' });
-  },
-};
+});

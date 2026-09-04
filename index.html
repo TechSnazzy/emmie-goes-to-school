@@ -3,44 +3,45 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<meta name="theme-color" content="#000000" />
+<meta name="theme-color" content="#1b1526" />
 <title>Emmie Goes to School</title>
-<meta name="description" content="A retro arcade game: get Emmie to class before the 7:50 bell." />
+<meta name="description" content="A friendly little game: help Emmie get ready and walk to class." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8E%92%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="cabinet">
-  <div id="marquee">EMMIE&nbsp;GOES&nbsp;TO&nbsp;SCHOOL</div>
-  <div id="stage">
-    <canvas id="screen" width="480" height="270"></canvas>
-  </div>
-  <div id="controls">
-    <p class="keys">
-      MOVE <b>Arrows / WASD</b> &nbsp;·&nbsp; JUMP <b>Up / Space</b> &nbsp;·&nbsp;
-      ACTION <b>Z / Enter</b> &nbsp;·&nbsp; MUTE <b>M</b>
-    </p>
-  </div>
-</div>
+<div id="stage">
+  <canvas id="screen" width="640" height="360"></canvas>
 
-<div id="touch" hidden>
-  <div class="dpad">
-    <button id="t-up" aria-label="up">▲</button>
-    <div class="dpad-mid">
-      <button id="t-left" aria-label="left">◀</button>
-      <button id="t-down" aria-label="down">▼</button>
-      <button id="t-right" aria-label="right">▶</button>
+  <div id="audiobtns">
+    <button id="btn-music" data-icon="♪ music" title="Music on/off (M)">♪ music</button>
+    <button id="btn-sfx" data-icon="🔊 sounds" title="Sounds on/off (N)">🔊 sounds</button>
+  </div>
+
+  <div id="touch" hidden>
+    <div class="dpad">
+      <button id="t-up" aria-label="up">▲</button>
+      <div class="row">
+        <button id="t-left" aria-label="left">◀</button>
+        <button id="t-down" aria-label="down">▼</button>
+        <button id="t-right" aria-label="right">▶</button>
+      </div>
     </div>
-  </div>
-  <div class="abtn">
-    <button id="t-jump" aria-label="jump">JUMP</button>
-    <button id="t-act" aria-label="action">Z</button>
+    <button id="t-act" class="big" aria-label="do it">Z</button>
   </div>
 </div>
 
+<script>
+window.addEventListener('error', (e) => {
+  const d = document.createElement('pre');
+  d.style.cssText = 'position:fixed;inset:0;margin:0;padding:12px;color:#fff;background:#711;font:12px/1.5 monospace;white-space:pre-wrap;z-index:99';
+  d.textContent = 'ERROR: ' + e.message + '\n' + (e.filename || '') + ':' + e.lineno + '\n\n' + ((e.error && e.error.stack) || '');
+  document.body.appendChild(d);
+});
+</script>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

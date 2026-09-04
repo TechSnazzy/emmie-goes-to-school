@@ -2,67 +2,54 @@
 
 html, body {
   height: 100%;
-  background: #05060a;
-  color: #cfd8e3;
-  font-family: "Press Start 2P", "Courier New", monospace;
+  width: 100%;
+  background: #12101a;
   overflow: hidden;
+  font-family: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background:
-    radial-gradient(circle at 50% 30%, #16181f 0%, #05060a 70%);
-}
-
-#cabinet {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-#marquee {
-  font-size: clamp(9px, 2.4vw, 16px);
-  letter-spacing: 2px;
-  color: #ff5aa8;
-  text-shadow: 0 0 8px #ff5aa8aa, 2px 2px 0 #3a0e28;
-  padding: 6px 14px;
-  border: 2px solid #2a2140;
-  border-radius: 4px;
-  background: #0c0a14;
+  color: #fff;
 }
 
 #stage {
-  position: relative;
-  padding: 14px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #23262e, #14161c);
-  border: 2px solid #2c2f38;
-  box-shadow: 0 12px 40px #000a, inset 0 0 0 4px #0a0b10;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #screen {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  background: #000;
-  border-radius: 6px;
-  box-shadow: 0 0 24px #000 inset, 0 0 2px #4af6 inset;
+  background: #1b1526;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
 }
 
-#controls { text-align: center; }
-.keys {
-  font-size: clamp(6px, 1.5vw, 9px);
-  line-height: 1.9;
-  color: #7c8699;
+/* audio buttons, pinned to the top-right of the viewport */
+#audiobtns {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
 }
-.keys b { color: #ffe066; }
+#audiobtns button {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  color: #2a2436;
+  background: rgba(255, 255, 255, 0.82);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+#audiobtns button.off {
+  color: #fff;
+  background: rgba(60, 55, 75, 0.7);
+}
 
 /* touch controls */
 #touch {
@@ -71,29 +58,25 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  padding: 18px 22px calc(18px + env(safe-area-inset-bottom));
   pointer-events: none;
+  z-index: 5;
 }
 #touch button {
   pointer-events: auto;
   font-family: inherit;
-  font-size: 12px;
+  font-weight: 700;
+  font-size: 16px;
   color: #fff;
-  background: #1c1f2aee;
-  border: 2px solid #3a3f52;
-  border-radius: 10px;
-  width: 52px;
-  height: 52px;
+  background: rgba(28, 24, 40, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  width: 56px;
+  height: 56px;
   touch-action: none;
   user-select: none;
 }
 #touch button:active { background: #ff5aa8; }
-.dpad { display: grid; justify-items: center; gap: 4px; }
-.dpad-mid { display: flex; gap: 4px; }
-.abtn { display: flex; gap: 10px; align-items: flex-end; }
-.abtn button { width: 64px; height: 64px; border-radius: 50%; }
-
-@media (max-width: 560px) {
-  #marquee { letter-spacing: 1px; }
-  #stage { padding: 8px; }
-}
+#touch .dpad { display: grid; justify-items: center; gap: 6px; }
+#touch .row { display: flex; gap: 6px; }
+#touch .big { width: 84px; height: 84px; border-radius: 50%; font-size: 24px; }

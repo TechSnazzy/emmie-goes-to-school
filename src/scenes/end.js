@@ -1,53 +1,57 @@
-// end.js — win / lose screen.
-import { W, H, rect, text, sfx, music, input } from '../engine.js';
-import { state, fmtClock, CLASS, finishRun } from '../state.js';
+// end.js — you always make it. Celebrate with stars for how speedy the morning was.
+import { W, H, ctx, rect, rr, text, input, rnd, clamp } from '../engine.js';
+import { state, finishRun, starsFor } from '../state.js';
+import { sfx } from '../audio.js';
 import { go } from '../router.js';
-import { drawEmmie, drawParent } from '../sprites.js';
+import * as S from '../sprites.js';
 
-let t = 0;
-let win = false;
-let reason = '';
+let t = 0, stars = 3, confetti = [], shown = 0;
 
 export const end = {
   id: 'end',
-  enter(p) {
-    t = 0;
-    win = !!(p && p.win);
-    reason = (p && p.reason) || '';
-    finishRun(win);
-    music.stop();
-    win ? sfx.win() : sfx.lose();
+  enter() {
+    t = 0; shown = 0;
+    finishRun();
+    stars = starsFor(state.elapsed);
+    confetti = [];
+    for (let i = 0; i < 90; i++) confetti.push({ x: rnd(0, W), y: rnd(-H, 0), v: rnd(40, 110), c: ['#ff5aa8', '#ffd34d', '#8fe07a', '#5a8ad0', '#a05ac0'][(Math.random() * 5) | 0], w: rnd(4, 8) });
+    sfx.win();
   },
   update(dt) {
     t += dt;
-    if (t > 0.7 && (input.pressed('act') || input.pressed('start'))) {
-      sfx.select();
-      go('title');
-    }
+    for (const c of confetti) { c.y += c.v * dt; c.x += Math.sin((c.y + c.x) * 0.05) * 12 * dt; if (c.y > H + 10) c.y = -10; }
+    const target = Math.min(3, Math.floor(t / 0.6));
+    if (target > shown && shown < stars) { shown++; sfx.star(); }
+    if (t > 1.2 && input.pressed('act')) { sfx.confirm(); go('title'); }
   },
   draw() {
-    rect(0, 0, W, H, win ? '#10241a' : '#241014');
-    for (let i = 0; i < 50; i++) rect((i * 83) % W, (i * 47 + (t * 20 | 0)) % H, 1, 1, win ? '#1d4030' : '#402028');
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#ffe1a8'); g.addColorStop(1, '#bfe3f2');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (const c of confetti) { ctx.fillStyle = c.c; ctx.fillRect(c.x, c.y, c.w, c.w); }
 
-    const spare = Math.round(CLASS - state.clock);
-    if (win) {
-      text('EMMIE MADE IT!', W / 2, 40, { size: 18, align: 'center', color: '#7CFC00' });
-      text(`in line at ${fmtClock(state.clock)}`, W / 2, 66, { size: 9, align: 'center', color: '#dfe7f5' });
-      text(`${spare} MINUTE${spare === 1 ? '' : 'S'} TO SPARE`, W / 2, 84, { size: 9, align: 'center', color: '#ffe066' });
-      const stars = state.best ? state.best.stars : 1;
-      text('★'.repeat(stars) + '☆'.repeat(3 - stars), W / 2, 104, { size: 16, align: 'center', color: '#ffe066' });
-      text('The teacher says: "Good morning, Emmie!"', W / 2, 130, { size: 7, align: 'center', color: '#9ad' });
-      const gy = H - 40;
-      drawEmmie(W / 2 - 14, gy, { facing: 1, frame: (t * 6 | 0) % 2 });
-      drawParent(W / 2 + 16, gy, { type: state.parent, facing: -1, frame: 0 });
-    } else {
-      text('LATE FOR CLASS', W / 2, 44, { size: 17, align: 'center', color: '#ff5a5a' });
-      text(reason || 'The bell already rang.', W / 2, 72, { size: 8, align: 'center', color: '#dfe7f5' });
-      text(`clock: ${fmtClock(Math.max(state.clock, CLASS))}`, W / 2, 92, { size: 8, align: 'center', color: '#ffb3b3' });
-      text('Tomorrow is a new morning. Try again!', W / 2, 118, { size: 7, align: 'center', color: '#9ad' });
+    S.drawSun(W / 2, 70, 26);
+    text('EMMIE MADE IT TO CLASS!', W / 2, 118, { size: 22, align: 'center', color: '#ff4d97', weight: '700' });
+
+    // stars
+    for (let i = 0; i < 3; i++) {
+      const lit = i < shown;
+      const x = W / 2 + (i - 1) * 62;
+      const pop = lit ? clamp((t - (i + 1) * 0.6) * 6, 0, 1) : 0.55;
+      ctx.save(); ctx.translate(x, 168); ctx.scale(0.7 + pop * 0.6, 0.7 + pop * 0.6);
+      text('★', 0, -18, { size: 40, align: 'center', color: lit ? '#ffd34d' : 'rgba(120,110,90,0.4)', weight: '700' });
+      ctx.restore();
     }
 
-    if (state.best) text(`BEST: ${'★'.repeat(state.best.stars)}  ${state.best.spareMin} MIN`, W / 2, H - 60, { size: 7, align: 'center', color: '#7CFC00' });
-    if ((t * 2 | 0) % 2 && t > 0.7) text('PRESS  Z / ENTER', W / 2, H - 22, { size: 8, align: 'center', color: '#fff' });
+    const msg = stars === 3 ? 'A super speedy morning!' : stars === 2 ? 'Nice work — a calm morning!' : 'You made it! Try to be a little quicker next time.';
+    text(msg, W / 2, 210, { size: 13, align: 'center', color: '#3a2a3a', weight: '700' });
+    text(`morning took ${Math.round(state.elapsed)} seconds`, W / 2, 234, { size: 10, align: 'center', color: '#6a5a4a' });
+    if (state.best) text(`best: ${'★'.repeat(state.best.stars)}${'☆'.repeat(3 - state.best.stars)}  (${state.best.time}s)`, W / 2, 252, { size: 10, align: 'center', color: '#7a5a2a', weight: '700' });
+
+    const gy = H - 26;
+    S.drawEmmie(W / 2 - 18, gy, { dir: 'down', anim: t * 5, moving: true });
+    S.drawParentBy(state.parent, W / 2 + 16, gy, { dir: 'down', anim: t * 4, moving: true });
+
+    if (t > 1.2 && (t * 2 | 0) % 2) text('press  Z  to play again', W / 2, 280, { size: 13, align: 'center', color: '#2a7d46', weight: '700' });
   },
 };
