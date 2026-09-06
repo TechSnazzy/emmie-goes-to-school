@@ -9,6 +9,9 @@ import { sfx } from '../audio.js';
 import { go } from '../router.js';
 import { newRoot, snapTo, lookAtWorld, setRoomBounds, setShadowSpan, setSky, setLightLevel, pointerState, THREE } from '../render3d.js';
 import * as M from '../models.js';
+import { chapterProgress, collectSticker } from '../adventure.js';
+import { disposeTree } from '../render3d.js';
+import { rainbow, flower, batchFlowers } from '../delight.js';
 
 const ROAD_W = 260;
 const LENGTH = 4200;              // world units of road
@@ -28,6 +31,7 @@ export const drive = {
     setRoomBounds(400, 260, 90); setShadowSpan(320); setSky('#bfe6f2', '#6b7a5a'); setLightLevel(1);
     setScene('Driving to School', [{ label: 'reach the park', done: false }]);
     state.running = true;
+    chapterProgress('drive');
     sfx.car();
 
     // ground + road running along -Z
@@ -45,12 +49,17 @@ export const drive = {
 
     car = M.makeCar(M.C.car, { tesla: true });
     root.add(car);
+    for (let i=0;i<35;i++) root.add(flower(155+(i%3)*12,-i*120,['#f4b0c8','#e7c665','#b9a0e0'][i%3],1.2));
+    rainbow(root,210,-LENGTH+140,105);
+    batchFlowers(root);
     snapTo(0, 0);
   },
 
   update(dt) {
     t += dt; tickProgress(dt); beepCd -= dt; msgT += dt; honkCd -= dt; sirenCd -= dt;
-    setObjective('Drive to the park — steer, and ↑/↓ (or drag) to speed up or slow down');
+    setObjective('A ride with Dad! Drag to steer, or enjoy the view.');
+    chapterProgress('drive', dist / LENGTH);
+    if (dist > LENGTH * 0.55) collectSticker('road');
     const z0 = -dist;
 
     // --- speed: keyboard up/down, or drag forward/back of the car ---
@@ -115,7 +124,7 @@ export const drive = {
         beepCd = 1.3; sfx.beep(); toast('beep beep!');
         x = clamp(x + (x < c.m.position.x ? -34 : 34), -ROAD_W / 2 + 26, ROAD_W / 2 - 26);
       }
-      if (c.m.position.z > z + 260 || c.m.position.z < z - 520) { root.remove(c.m); cars.splice(i, 1); }
+      if (c.m.position.z > z + 260 || c.m.position.z < z - 520) { root.remove(c.m); disposeTree(c.m); cars.splice(i, 1); }
     }
 
     lookAtWorld(x * 0.35, z, Math.min(1, dt * 5));

@@ -6,6 +6,8 @@ import {
   goScene, drawFade, syncHUD, updateToasts, setScreenMode,
 } from './state.js';
 import { render } from './render3d.js';
+import { adventure } from './adventure.js';
+import { initPresentation, syncPresentation } from './presentation.js';
 import { register, go } from './router.js';
 
 import { title } from './scenes/title.js';
@@ -21,6 +23,7 @@ import { end } from './scenes/end.js';
 
 window.__dbg = { frames: 0, scene: '' };
 initTouch();
+initPresentation();
 
 const intro = makeStory([
   ['Emmie Goes to School', "It's 6:50 in the morning."],
@@ -36,8 +39,9 @@ const intro = makeStory([
 function wireButton(id, get, set) {
   const el = document.getElementById(id);
   if (!el) return;
-  const paint = () => { el.textContent = el.dataset.icon + (get() ? '' : ' off'); el.classList.toggle('off', !get()); };
+  const paint = () => { el.textContent = el.dataset.icon + (get() ? '' : ' off'); el.classList.toggle('off', !get()); el.setAttribute('aria-pressed', String(get())); };
   el.addEventListener('click', () => { set(); paint(); });
+  window.addEventListener('audio-settings-changed', paint);
   paint();
 }
 wireButton('btn-music', () => settings.music, toggleMusic);
@@ -50,13 +54,14 @@ const startAt = params.get('scene');
 if (startAt && startAt !== 'title') go(startAt); else goScene(title);
 
 startLoop((dt) => {
-  updateSceneManager(dt);
+  if (!adventure.paused) updateSceneManager(dt);
   const s = currentScene();
   window.__dbg.frames++; window.__dbg.scene = (s && s.id) || '';
-  if (s && s.update) s.update(dt);
-  updateToasts(dt);
+  if (!adventure.paused && s && s.update) s.update(dt);
+  if (!adventure.paused) updateToasts(dt);
   syncHUD();
   setScreenMode(!!(s && s.screen));
+  syncPresentation(s?.id || '');
 
   render();
   clearOverlay();

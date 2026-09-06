@@ -1,52 +1,47 @@
-// title.js — a little 3D diorama with the title drawn over it.
-import { W, H, text, rr, input } from '../engine.js';
-import { sfx, startMusic } from '../audio.js';
-import { resetRun, state } from '../state.js';
-import { go } from '../router.js';
-import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel } from '../render3d.js';
+import { resetRun } from '../state.js';
+import { newRoot, snapTo, lookAtWorld, setViewSpan, setShadowSpan, setSky, setLightLevel, THREE } from '../render3d.js';
 import * as M from '../models.js';
-import { VERSION } from '../version.js';
+import { decorate, rainbow } from '../delight.js';
 
-let t = 0, cast = null;
-
+let t = 0, cast, delight;
 export const title = {
-  id: 'title',
-  screen: true,
+  id:'title', screen:true,
   enter() {
-    t = 0;
-    resetRun();
-    const root = newRoot();
-    setViewSpan(440); setShadowSpan(300); setSky('#8fd6ef', '#6b7a5a'); setLightLevel(1, '#ffe6d0');
-
-    root.add(M.makeGround(740, 560, M.C.grass, { thick: 46, margin: 0 }));
-    for (const [x, z, s] of [[-230, -140, 1.3], [240, -110, 1.1], [-250, 120, 1.0], [270, 150, 1.2]]) {
-      const tr = M.makeTree(s); tr.position.set(x, 0, z); root.add(tr);
+    t = 0; resetRun(); const root = newRoot();
+    setShadowSpan(400); setSky('#eee5f1','#90ab8b'); setLightLevel(1,'#fff0e6');
+    const island = new THREE.Mesh(new THREE.CylinderGeometry(265,250,35,64), M.MAT('#b1c69b'));
+    island.scale.z = 0.76; island.position.y = -18; island.receiveShadow = true; root.add(island);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(250,225,30,64), M.MAT('#d7bb98'));
+    rim.scale.z = 0.76; rim.position.y = -47; root.add(rim);
+    const path = new THREE.Mesh(new THREE.RingGeometry(104,129,64), M.MAT('#f2ddbb',{side:THREE.DoubleSide}));
+    path.rotation.x = -Math.PI/2; path.position.y = 1; path.scale.y = 0.75; root.add(path);
+    rainbow(root, -55,-70,155);
+    const school = M.makeSchool(145,70,75); school.position.set(95,0,-115); root.add(school);
+    for (const [x,z,scale] of [[-180,-60,1.4],[175,30,1.5],[-170,100,1]]) {
+      const tr = new THREE.Group(); tr.add(M.cyl(5,40,'#a78873'));
+      for(let i=0;i<3;i++) { const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(27,1),M.MAT(['#d6a4c8','#ebbacd','#bbabd1'][i])); crown.position.set((i-1)*16,52+(i%2)*15,0); crown.castShadow=true; tr.add(crown); }
+      tr.position.set(x,0,z);tr.scale.setScalar(scale);root.add(tr);
     }
-    for (const [x, z] of [[-120, 130], [150, 150]]) { const b = M.makeBush(); b.position.set(x, 0, z); root.add(b); }
-
-    const mom = M.makePerson(M.PAL.mom); mom.position.set(-86, 0, 60); mom.rotation.y = 0.5;
-    const emmie = M.makeEmmie(); emmie.position.set(-10, 0, 78); emmie.rotation.y = 0.1;
-    const dad = M.makePerson(M.PAL.dad); dad.position.set(70, 0, 56); dad.rotation.y = -0.5;
-    const cat = M.makeCat(); cat.position.set(132, 0, 96); cat.rotation.y = -0.7;
-    root.add(mom, emmie, dad, cat);
-    cast = { mom, emmie, dad, cat };
-    snapTo(0, -10);
+    const mom=M.makePerson(M.PAL.mom), emmie=M.makeEmmie(), dad=M.makePerson(M.PAL.dad), cat=M.makeCat();
+    mom.position.set(-62,0,50); emmie.position.set(0,0,95); dad.position.set(65,0,35); cat.position.set(90,0,115);
+    for (const person of [mom,emmie,dad]) { person.rotation.y=Math.PI/4; person.scale.setScalar(1.3); }
+    cat.scale.setScalar(1.4);cat.rotation.y=0.6;root.add(mom,emmie,dad,cat);cast={mom,emmie,dad,cat};
+    delight=decorate(root,'title');
+    frameCamera(true);
   },
   update(dt) {
-    t += dt;
-    for (const k of ['mom', 'emmie', 'dad']) M.stepPerson(cast[k], t * 2.4, true);
-    cast.cat.position.y = Math.abs(Math.sin(t * 2)) * 2;
-    lookAtWorld(Math.sin(t * 0.25) * 20, -10, Math.min(1, dt * 2));
-    if (input.pressed('act')) { sfx.confirm(); startMusic(); go('intro'); }
-  },
-  draw() {
-    text('EMMIE', W / 2, 26, { size: 46, align: 'center', color: '#ff4d97', weight: '800' });
-    text('GOES TO SCHOOL', W / 2, 74, { size: 20, align: 'center', color: '#fff', weight: '800' });
-    text("It's a big morning. Help Emmie get to class!", W / 2, 104, { size: 13, align: 'center', color: '#40243a', weight: '700' });
-    rr(W / 2 - 150, H - 62, 300, 52, 14, 'rgba(26,20,36,0.72)');
-    text('Click where Emmie should go — she walks there herself', W / 2, H - 56, { size: 12, align: 'center', color: '#cfc6da', weight: '700' });
-    if (t % 1.15 < 0.75) text('click anywhere to start', W / 2, H - 36, { size: 17, align: 'center', color: '#8fe07a', weight: '800' });
-    if (state.best) text(`best: ${'★'.repeat(state.best.stars)}${'☆'.repeat(3 - state.best.stars)}`, 14, 12, { size: 13, color: '#7a4a1a', weight: '800' });
-    text(`v${VERSION}`, W - 10, H - 14, { size: 11, align: 'right', color: 'rgba(255,255,255,0.55)', weight: '700', shadow: 'rgba(0,0,0,0.4)' });
+    t+=dt; M.refreshBackpack(cast.emmie);
+    for(const k of ['mom','emmie','dad']) { M.stepPerson(cast[k],t*2.1,false);cast[k].position.y=Math.sin(t*2+(k==='mom'?1:0))*0.7; }
+    cast.emmie.userData.armR.rotation.x=-2.3+Math.sin(t*4)*0.25;
+    cast.cat.position.y=Math.abs(Math.sin(t*1.8))*1.5;
+    delight.update(dt,t);frameCamera(false,dt);
   },
 };
+function frameCamera(snap,dt=0.016) {
+  const mobile=matchMedia('(max-width:720px), (max-width:1100px) and (orientation:portrait)').matches && !matchMedia('(max-height:450px) and (min-width:560px)').matches;
+  const host=document.getElementById('view');
+  setViewSpan(mobile ? 620*host.clientHeight/host.clientWidth : 540);
+  const offset=host.clientWidth<350 ? -255 : -165;
+  const x=mobile?offset:-145, z=mobile?offset:145;
+  if(snap) snapTo(x,z); else lookAtWorld(x+Math.sin(t*0.25)*5,z,Math.min(1,dt*2));
+}

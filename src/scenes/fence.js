@@ -60,6 +60,7 @@ export const fence = walkScene({
         const dog = M.makeDog();
         put(dog, C.puppy.x, C.puppy.y, Math.PI / 2);
         dog.scale.setScalar(0.7);
+        C.puppyMesh = dog;
         root.add(dog);
 
         const teach = M.makePerson(M.PAL.teacher);

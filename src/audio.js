@@ -122,6 +122,7 @@ export function toggleMusic() {
   ensure();
   if (musicBus) musicBus.gain.setTargetAtTime(settings.music ? 0.9 : 0, actx.currentTime, 0.1);
   if (settings.music) startMusic(); else stopMusic();
+  window.dispatchEvent(new Event('audio-settings-changed'));
   sfx.confirm();
   return settings.music;
 }
@@ -131,6 +132,7 @@ export function toggleSfx() {
   ensure();
   if (sfxBus) sfxBus.gain.setTargetAtTime(settings.sfx ? 0.9 : 0, actx.currentTime, 0.05);
   if (settings.sfx) sfx.confirm();
+  window.dispatchEvent(new Event('audio-settings-changed'));
   return settings.sfx;
 }
 

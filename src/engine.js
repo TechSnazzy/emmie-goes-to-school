@@ -26,13 +26,18 @@ function press(a) { if (!held.has(a)) { held.add(a); edgeDown.add(a); } }
 function release(a) { held.delete(a); }
 
 window.addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea, select, dialog')) return;
+  if (e.target.closest?.('button, a') && ['Space', 'Enter'].includes(e.code)) return;
   if (e.repeat) return;
   const a = KEYMAP[e.code];
   if (a) { press(a); e.preventDefault(); }
   if (e.code === 'KeyM') toggleMusicKey();
   if (e.code === 'KeyN') toggleSfxKey();
 });
-window.addEventListener('keyup', (e) => { const a = KEYMAP[e.code]; if (a) { release(a); e.preventDefault(); } });
+window.addEventListener('keyup', (e) => {
+  const a = KEYMAP[e.code];
+  if (a) { if (held.has(a)) e.preventDefault(); release(a); }
+});
 window.addEventListener('blur', () => held.clear());
 
 export const input = {
@@ -53,7 +58,7 @@ function endFrameInput() {
   while (virtualHeld.length) release(virtualHeld.pop());
 }
 const viewEl = document.getElementById('view');
-if (viewEl) viewEl.addEventListener('pointerdown', () => virtualPress('act'));
+if (viewEl) viewEl.addEventListener('pointerdown', e => { if (e.target.tagName === 'CANVAS') virtualPress('act'); });
 
 // Touch uses tap-to-walk like the mouse, so the old d-pad is retired.
 export function initTouch() {
