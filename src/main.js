@@ -39,8 +39,9 @@ const intro = makeStory([
 function wireButton(id, get, set) {
   const el = document.getElementById(id);
   if (!el) return;
-  const paint = () => { el.textContent = el.dataset.icon + (get() ? '' : ' off'); el.classList.toggle('off', !get()); };
+  const paint = () => { el.textContent = el.dataset.icon + (get() ? '' : ' off'); el.classList.toggle('off', !get()); el.setAttribute('aria-pressed', String(get())); };
   el.addEventListener('click', () => { set(); paint(); });
+  window.addEventListener('audio-settings-changed', paint);
   paint();
 }
 wireButton('btn-music', () => settings.music, toggleMusic);

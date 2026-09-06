@@ -38,9 +38,10 @@ export const title = {
   },
 };
 function frameCamera(snap,dt=0.016) {
-  const mobile=matchMedia('(max-width:720px), (max-width:1100px) and (orientation:portrait)').matches;
+  const mobile=matchMedia('(max-width:720px), (max-width:1100px) and (orientation:portrait)').matches && !matchMedia('(max-height:450px) and (min-width:560px)').matches;
   const host=document.getElementById('view');
   setViewSpan(mobile ? 620*host.clientHeight/host.clientWidth : 540);
-  const x=mobile?-165:-145, z=mobile?-165:145;
+  const offset=host.clientWidth<350 ? -255 : -165;
+  const x=mobile?offset:-145, z=mobile?offset:145;
   if(snap) snapTo(x,z); else lookAtWorld(x+Math.sin(t*0.25)*5,z,Math.min(1,dt*2));
 }

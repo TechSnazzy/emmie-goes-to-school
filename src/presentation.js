@@ -40,6 +40,7 @@ export function initPresentation() {
   paintPacks();
   document.querySelector('.welcome-footer').lastElementChild.title = `Version ${VERSION}`;
   document.body.dataset.version = VERSION;
+  $('game-version').textContent = `v${VERSION}`;
   $('btn-play').addEventListener('click', () => { sfx.confirm(); startMusic(); go('bedroom'); });
   $('btn-replay').addEventListener('click', () => { sfx.confirm(); go('title'); });
   $('btn-album').addEventListener('click', openAlbum); $('btn-end-album').addEventListener('click', openAlbum);

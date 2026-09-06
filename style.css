@@ -27,6 +27,8 @@ button:disabled { opacity:.5; cursor:default; transform:none; }
 #main { flex:1; display:flex; min-height:0; gap:0; border-radius:25px; overflow:hidden; border:1px solid #e3dce7; }
 #view { position:relative; flex:1; min-width:0; min-height:0; background:#bfe6f2; }
 #view3d { display:block; width:100%; height:100%; }
+.game-version { position:absolute; bottom:7px; right:4%; font-size:10px; color:var(--muted); }
+#game-error .primary { margin-top:20px; }
 #ui { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 #toast { position:absolute; top:24px; left:50%; transform:translate(-50%,-10px); width:max-content; max-width:90%; padding:13px 22px; border-radius:18px; background:#fffaf2; box-shadow:0 8px 35px #453a5926; text-align:center; font-family:'Baloo 2',sans-serif; font-size:20px; line-height:1.3; font-weight:700; color:#795194; pointer-events:none; opacity:0; transition:opacity .25s,transform .25s; z-index:5; }
 #toast.show { opacity:1; transform:translate(-50%,0); }
@@ -127,7 +129,7 @@ dialog h2 { font:700 36px/1.2 'Baloo 2',sans-serif; margin:12px 0; letter-spacin
 }
 @media(max-height:610px) and (min-width:721px) { #topbar { flex-basis:60px; }.welcome-copy { transform:translateY(-50%); } h1 { font-size:50px; margin:9px 0; }.story-description { display:none; }.pack-picker { margin-top:14px; } #btn-play { margin-top:16px; }.welcome-footer { bottom:12px; }.diorama-caption { bottom:14%; }.celebration-card h1 { font-size:43px; }.medals { margin:8px 0; }.medals>div { font-size:27px; } #end-stickers { margin:8px 0 12px; }.love-note { margin-top:0; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
-@media(max-height:450px) and (min-width:721px) {
+@media(max-height:450px) and (min-width:560px) {
   #app { padding-bottom:8px; } #topbar { flex-basis:50px; }
   .welcome-copy { top:50%; transform:translateY(-50%); }.welcome-copy>.eyebrow { display:none; }
   h1 { font-size:38px; margin:0 0 6px; letter-spacing:-1.3px; }.story-subtitle { font-size:14px; }
@@ -139,4 +141,26 @@ dialog h2 { font:700 36px/1.2 'Baloo 2',sans-serif; margin:12px 0; letter-spacin
   .celebration-card .medals { margin:5px 0; }.medals>div { font-size:23px; }.medals span { font-size:8px; }
   #end-message { font-size:10px; } #end-stickers { display:none; }.celebration-card .primary { padding:9px 14px; font-size:11px; min-height:35px; margin-top:8px; }
   .love-note { display:none; }.celebration-card .text-button { padding:9px 0; }
+  #welcome { background:linear-gradient(90deg,#f7f0f6 0%,#f7f0f6ef 30%,#f7f0f600 60%); }
+  #celebration { background:linear-gradient(90deg,#f9f1eafa 0%,#f9f1eae6 30%,#f9f1ea00 65%); }
+  .welcome-copy,.celebration-card { left:5%; width:43%; }
+  #btn-play { position:static; max-width:100%; }
+  .welcome-copy h1 br,.celebration-card h1 br { display:initial; }
+  .celebration-card .story-subtitle { font-size:12px; }
+  body:not(.screen) #topbar { flex-basis:75px; }
+  #main { flex-direction:row; }
+  #panel { flex:0 0 210px; max-height:none; border-top:0; border-left:1px solid var(--line); }
+  #panel ul { display:block; max-height:none; }
+  #journey { position:static; width:auto; }
+  #btn-read { padding:10px 0; }
+}
+@media(max-width:360px) and (orientation:portrait) {
+  .welcome-copy { top:18px; }
+  .welcome-copy h1 { font-size:34px; }
+  #btn-play { position:static; width:100%; max-width:100%; margin-top:12px; min-height:44px; padding:9px 17px; }
+  .play-note { margin-top:12px; }
+  .diorama-caption { display:none; }
+  .celebration-card h1 { font-size:35px; }
+  .celebration-card h1 br { display:initial; }
+  .celebration-card .love-note { display:none; }
 }

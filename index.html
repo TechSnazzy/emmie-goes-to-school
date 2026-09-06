@@ -23,7 +23,7 @@
       <div class="bar"><div id="sunfill"></div></div>
       <span class="lbl">my morning</span>
     </div>
-    <div id="obj"></div>
+      <div id="obj" role="status"></div>
     <div id="audiobtns">
       <button id="btn-music" data-icon="♪ music">♪ music</button>
       <button id="btn-sfx" data-icon="🔊 sounds">🔊 sounds</button>
@@ -37,7 +37,7 @@
     <div id="view">
       <canvas id="view3d"></canvas>
       <canvas id="ui" width="640" height="360"></canvas>
-      <div id="toast"></div>
+      <div id="toast" role="status"></div>
       <section id="welcome" class="story-screen" hidden aria-labelledby="welcome-title">
         <div class="welcome-copy">
           <p class="eyebrow"><span>✦</span> A LITTLE ADVENTURE. JUST FOR YOU.</p>
@@ -50,6 +50,7 @@
         </div>
         <div class="diorama-caption"><span>♡</span> Mom, Dad, Emmie & a little Milo magic</div>
         <div class="welcome-footer"><span>MADE WITH LOVE, BY DAD</span><span>THE WONDERFUL MORNING EDITION <b>✦</b></span></div>
+        <span id="game-version" class="game-version"></span>
       </section>
       <section id="celebration" class="story-screen" hidden aria-labelledby="celebration-title">
         <div class="celebration-card">
@@ -104,10 +105,13 @@
 </dialog>
 <script>
 window.addEventListener('error', (e) => {
-  const d = document.createElement('pre');
-  d.style.cssText = 'position:fixed;inset:0;margin:0;padding:12px;color:#fff;background:#711;font:12px/1.5 monospace;white-space:pre-wrap;z-index:99;overflow:auto';
-  d.textContent = 'ERROR: ' + e.message + '\n' + (e.filename || '') + ':' + e.lineno + '\n\n' + ((e.error && e.error.stack) || '');
-  document.body.appendChild(d);
+  console.error('Emmie could not continue:', e.error || e.message);
+  if (document.getElementById('game-error')) return;
+  const d = document.createElement('dialog');
+  d.id = 'game-error'; d.setAttribute('aria-labelledby', 'error-title');
+  d.innerHTML = '<h2 id="error-title">A little hiccup…</h2><p class="dialog-description">Let’s try opening Emmie’s adventure again.</p><button class="primary">Try again ↻</button>';
+  d.querySelector('button').addEventListener('click', () => location.reload());
+  document.body.appendChild(d); d.showModal();
 });
 </script>
 <script type="module" src="src/main.js"></script>
