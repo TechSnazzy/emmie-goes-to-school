@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<meta name="theme-color" content="#1b1526" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#faf6ef" />
 <title>Emmie Goes to School</title>
 <meta name="description" content="A friendly little game: help Emmie get ready and walk to class." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8E%92%3C/text%3E%3C/svg%3E" />
@@ -17,15 +17,18 @@
 
   <!-- top bar: never overlaps the 3D view -->
   <header id="topbar">
+    <a class="brand" href="https://seantechguy.com" aria-label="Sean's website"><span class="brand-mark">e<span>✦</span></span><span>Emmie’s<br /><b>little adventures</b></span></a>
     <div id="sun">
       <span class="sun-dot">☀</span>
       <div class="bar"><div id="sunfill"></div></div>
-      <span class="lbl">morning</span>
+      <span class="lbl">my morning</span>
     </div>
     <div id="obj"></div>
     <div id="audiobtns">
       <button id="btn-music" data-icon="♪ music">♪ music</button>
       <button id="btn-sfx" data-icon="🔊 sounds">🔊 sounds</button>
+      <button id="btn-album" aria-haspopup="dialog">✦ <span>Sticker book</span> <small id="album-count">0/8</small></button>
+      <button id="btn-pause" aria-label="Pause adventure" hidden>Ⅱ</button>
     </div>
   </header>
 
@@ -35,13 +38,43 @@
       <canvas id="view3d"></canvas>
       <canvas id="ui" width="640" height="360"></canvas>
       <div id="toast"></div>
+      <section id="welcome" class="story-screen" hidden aria-labelledby="welcome-title">
+        <div class="welcome-copy">
+          <p class="eyebrow"><span>✦</span> A LITTLE ADVENTURE. JUST FOR YOU.</p>
+          <h1 id="welcome-title">Emmie goes<br /> to <em>school.</em><span class="title-spark">✧</span></h1>
+          <p class="story-subtitle">A big day starts with little wonders.</p>
+          <p class="story-description">Get ready with Mom, ride with Dad, and find<br class="desktop-break" /> a little magic on your way to class.</p>
+          <fieldset class="pack-picker"><legend>First, pick your backpack</legend><div id="pack-choices"></div></fieldset>
+          <button id="btn-play" class="primary">Let’s go, Emmie! <span>↗</span></button>
+          <p class="play-note">Just click or tap to explore. Take your time. ♡</p>
+        </div>
+        <div class="diorama-caption"><span>♡</span> Mom, Dad, Emmie & a little Milo magic</div>
+        <div class="welcome-footer"><span>MADE WITH LOVE, BY DAD</span><span>THE WONDERFUL MORNING EDITION <b>✦</b></span></div>
+      </section>
+      <section id="celebration" class="story-screen" hidden aria-labelledby="celebration-title">
+        <div class="celebration-card">
+          <p class="eyebrow">A LITTLE MORNING. A BIG ADVENTURE.</p>
+          <h1 id="celebration-title">You did it,<br /><em>Emmie!</em></h1>
+          <p class="story-subtitle">Room 3 is brighter with you in it.</p>
+          <div class="medals"><div>★<span>Ready</span></div><div>★<span>Kind</span></div><div>★<span>Brave</span></div></div>
+          <p id="end-message"></p><div id="end-stickers"></div>
+          <button id="btn-replay" class="primary">Another little adventure <span>↗</span></button>
+          <button id="btn-end-album" class="text-button">Open my sticker book →</button>
+          <p class="love-note">“I’m so proud of you.” — Dad ♡</p>
+        </div>
+      </section>
     </div>
 
     <!-- the checklist lives beside the view, never over it -->
     <aside id="panel">
+      <p class="eyebrow" id="chapter-label">MY MORNING</p>
+      <nav id="journey" aria-label="Your morning journey"></nav>
       <h3 id="panel-title">Getting Ready</h3>
       <ul id="panel-list"></ul>
-      <p id="panel-hint"><b>Click where Emmie should go.</b><br />She walks there and does the job by herself.</p>
+      <button id="btn-guide" class="guide-button">Walk to my next job <span>→</span></button>
+      <div class="wonder-note"><span>✦</span><div><b>A little wonder is hiding…</b><p id="discovery-hint">Tap a golden star to collect a sticker!</p></div></div>
+      <p id="panel-hint">Tap the ground to walk.<br />The yellow ring shows your next job.</p>
+      <button id="btn-read" class="text-button" aria-pressed="false">♡ Read directions to me</button>
     </aside>
   </div>
 
@@ -58,6 +91,17 @@
   </div>
 </div>
 
+<dialog id="album-dialog" aria-labelledby="album-title">
+  <div class="dialog-top"><p class="eyebrow">LITTLE THINGS, LOVELY MEMORIES</p><button class="close-dialog" aria-label="Close sticker book">×</button></div>
+  <h2 id="album-title">Emmie’s <em>sticker book</em></h2>
+  <p class="dialog-description">Every morning has a little magic. Here’s yours.</p>
+  <div id="sticker-grid"></div><p class="album-footer" id="album-footer"></p>
+</dialog>
+<dialog id="pause-dialog" aria-labelledby="pause-title">
+  <p class="eyebrow">TAKE A LITTLE BREATHER</p><h2 id="pause-title">Your adventure<br />can wait. ♡</h2>
+  <p class="dialog-description">Emmie will be right here when you’re ready.</p>
+  <button id="btn-resume" class="primary">Keep exploring →</button>
+</dialog>
 <script>
 window.addEventListener('error', (e) => {
   const d = document.createElement('pre');

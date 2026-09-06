@@ -1,35 +1,28 @@
 // state.js — morning progress (no fail state), objectives, DOM HUD, scene manager.
 import { W, H, ctx, rect, text, input, clamp, circle } from './engine.js';
 import { sfx } from './audio.js';
+import { adventure, resetAdventure, completeAdventure } from './adventure.js';
 
-export const PAR = 165;     // seconds of play for a calm, unhurried run
 export const state = {
   elapsed: 0,
   running: false,
   ended: false,
-  best: loadBest(),
   objective: '',
   checklist: [],
   sceneTitle: '',
 };
 
-function loadBest() { try { const v = localStorage.getItem('emmie_best_v2'); return v ? JSON.parse(v) : null; } catch { return null; } }
-function saveBest() { try { localStorage.setItem('emmie_best_v2', JSON.stringify(state.best)); } catch {} }
-
 export function resetRun() {
+  resetAdventure();
   state.elapsed = 0; state.running = false; state.ended = false;
   state.objective = ''; state.checklist = []; state.sceneTitle = '';
 }
 export function tickProgress(dt) { if (state.running && !state.ended) state.elapsed += dt; }
-export function progress01() { return clamp(state.elapsed / (PAR * 1.7), 0, 1); }
-export function starsFor(sec) { return sec <= PAR * 0.85 ? 3 : sec <= PAR * 1.25 ? 2 : 1; }
+export function progress01() { return state.ended ? 1 : clamp((adventure.chapter + adventure.fraction) / 8, 0, 1); }
 export function finishRun() {
   if (state.ended) return;
   state.ended = true; state.running = false;
-  const s = starsFor(state.elapsed), t = Math.round(state.elapsed);
-  if (!state.best || s > state.best.stars || (s === state.best.stars && t < state.best.time)) {
-    state.best = { stars: s, time: t }; saveBest();
-  }
+  completeAdventure();
 }
 
 // --- DOM HUD ------------------------------------------------------
@@ -55,16 +48,18 @@ export function syncHUD() {
   if ($obj.textContent !== state.objective) $obj.textContent = state.objective;
   const p = progress01();
   $fill.style.width = (p * 100).toFixed(1) + '%';
-  $fill.style.background = p < 0.7 ? '#8fe07a' : p < 0.9 ? '#ffd34d' : '#ff9a6b';
+  $fill.style.background = '#9abda0';
   const sig = state.sceneTitle + '|' + state.checklist.map((c) => c.label + (c.done ? '1' : '0')).join(',');
   if (sig !== listSig) {
     listSig = sig;
     $title.textContent = state.sceneTitle || '';
     $list.innerHTML = '';
+    let active = false;
     for (const c of state.checklist) {
       const li = document.createElement('li');
       li.textContent = c.label;
       if (c.done) li.className = 'done';
+      else if (!active) { li.className = 'active'; active = true; }
       $list.appendChild(li);
     }
   }
@@ -81,8 +76,9 @@ export function updateToasts(dt) {
 // --- scene manager (soft fade on the 2D overlay) -----------------
 let current = null, next = null, fade = 0, fading = false;
 export function goScene(scene, payload) {
-  if (fading) return;
-  next = { scene, payload }; fading = true; fade = 0;
+  // A child can press Play as soon as it appears, even during the fade-in.
+  if (fading && next) return;
+  next = { scene, payload }; fading = true;
 }
 export function currentScene() { return current; }
 export function updateSceneManager(dt) {

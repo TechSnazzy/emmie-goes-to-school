@@ -10,6 +10,8 @@ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color('#bfe6f2');
@@ -89,7 +91,7 @@ export function setLightLevel(level = 1, skyTint) {
 function resize() {
   const host = canvas.parentElement;
   const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
-  renderer.setSize(w, h, false);
+  if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) renderer.setSize(w, h, false);
   const aspect = w / h;
   let halfH, halfW;
   if (fitMode) {
@@ -128,7 +130,7 @@ canvas.addEventListener('pointerdown', (e) => {
   pointerDown = true;
   canvas.setPointerCapture?.(e.pointerId);
   const w = toWorld(e);
-  if (w) { pendingClick = w; pointerWorld = w; }
+  if (w) { pendingClick = {...w, screenX:e.clientX, screenY:e.clientY}; pointerWorld = w; }
 });
 canvas.addEventListener('pointermove', (e) => {
   if (!pointerDown) return;
@@ -155,20 +157,24 @@ export function newRoot() {
   return root;
 }
 export function currentRoot() { return root; }
-function disposeTree(obj) {
+export function disposeTree(obj) {
+  const geometries = new Set(), materials = new Set();
   obj.traverse((o) => {
-    if (o.geometry) o.geometry.dispose();
-    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    if (o.geometry) geometries.add(o.geometry);
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (!m.userData.shared) materials.add(m); });
   });
+  geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose());
 }
 
 /** World ground point -> page pixel coords (used by the automated tests). */
 const projV = new THREE.Vector3();
-export function projectToScreen(x, y) {
-  projV.set(x, 0, y).project(camera);
+export function projectToScreen(x, y, height = 0) {
+  projV.set(x, height, y).project(camera);
   const r = canvas.getBoundingClientRect();
   return { x: r.left + (projV.x * 0.5 + 0.5) * r.width, y: r.top + (-projV.y * 0.5 + 0.5) * r.height };
 }
 
 export function render() { renderer.render(scene, camera); }
 resize();
+// Layout changes (side panel, device rotation) need a fresh camera fit too.
+new ResizeObserver(resize).observe(canvas.parentElement);

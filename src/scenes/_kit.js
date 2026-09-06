@@ -6,6 +6,8 @@ import { go } from '../router.js';
 import { createWorld, interact } from '../world.js';
 import { newRoot, lookAtWorld, snapTo, setViewSpan, setRoomBounds, setShadowSpan, setSky, setLightLevel, consumeClick, projectToScreen, THREE } from '../render3d.js';
 import * as M from '../models.js';
+import { adventure, chapterProgress } from '../adventure.js';
+import { decorate } from '../delight.js';
 
 export { createWorld, interact, go, setObjective, toast, M, THREE, setLightLevel };
 
@@ -25,6 +27,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
   let C = null, t = 0, idx = 0, endTimer = 0, narrT = 0;
   let marker = null, pointer = null, bar = null, emmie = null, dest = null, armed = false;
   let zoomT = 0, idleT = 999; // camera starts zoomed out; clicking zooms in, 5s idle zooms back out
+  let delight = null;
 
   return {
     id,
@@ -35,6 +38,9 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       C = build(payload) || {};
       C.root = root;
       if (C.build3d) C.build3d(root);
+      delight = decorate(root, id, {w:C.world.w, h:C.world.h, actors:C});
+      adventure.guided = false;
+      chapterProgress(id);
       if (C.roomW) setRoomBounds(C.roomW, C.roomH, C.wallH || 90);
       else setViewSpan(C.viewSpan || 400);
       setShadowSpan(C.shadowSpan || 320);
@@ -66,8 +72,15 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
 
       // click / tap anywhere on the ground to walk there
       const click = consumeClick();
-      if (click) { armed = true; if (!locked) C.world.moveTo(click.x, click.y); }
+      if (click) { armed = true; if (!delight.hit(click) && !locked) C.world.moveTo(click.x, click.y); }
       if (input.anyPressed()) armed = true;
+      const guide = document.getElementById('btn-guide');
+      guide.disabled = !cur || cur.x === undefined;
+      if (adventure.guided && cur && cur.x !== undefined) {
+        armed = true; adventure.guided = false; idleT = 0;
+        if (!locked) C.world.moveTo(cur.x, cur.y);
+      }
+      chapterProgress(id, idx / Math.max(1, steps.length));
 
       // camera zoom: zoomed out by default, zooms in on activity, back out after 5s idle
       let camW = C.camW || 380, camH = C.camH || 300;
@@ -82,17 +95,16 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       C.world.update(dt, { locked, bounds: C.bounds !== false });
       if (C.tick) C.tick(dt, t, idx);
 
-      if (globalThis.__EMMIE_AUTOPLAY && cur && cur.x !== undefined && !locked) {
-        const e = C.world.em, dx = cur.x - e.x, dy = cur.y - e.y, d = Math.hypot(dx, dy) || 1;
-        const s = Math.min(d, 260 * dt);
-        e.x += dx / d * s; e.y += dy / d * s;
+      if (globalThis.__EMMIE_AUTOPLAY && cur && cur.x !== undefined) {
+        armed = true;
+        if (!locked && !C.world.em.goal) C.world.moveTo(cur.x, cur.y);
       }
 
       if (cur) {
         setObjective(cur.objective || ('Go to the ' + cur.label));
         if (cur.x === undefined) {
           narrT += dt;
-          if (narrT > (cur.delay || 1.4)) { if (cur.onDone) cur.onDone(C); idx++; narrT = 0; }
+          if (narrT > (cur.delay || 1.4)) { if (cur.onDone) cur.onDone(C); if (cur.label) checkOff(cur.label); idx++; narrT = 0; }
         } else if (cur.ready === undefined || cur.ready(C, t)) {
           const rad = cur.radius ?? 30;
           const near = Math.hypot(cur.x - C.world.em.x, cur.y - C.world.em.y) < rad + 18;
@@ -101,6 +113,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
           if (interact(C.world, cur.x, cur.y, dt, { hold: cur.hold ?? 0.5, radius: rad, auto: armed })) {
             checkOff(cur.label);
             sfx.done();
+            delight.burst(C.world.em.x, C.world.em.y);
             if (cur.onDone) cur.onDone(C);
             if (cur.toast) toast(cur.toast);
             idx++;
@@ -146,6 +159,7 @@ export function walkScene({ id, title, build, next, endText = 'All done!  ▶', 
       if (goal) { dest.position.set(goal.x, 0, goal.y); dest.userData.ring.rotation.z = -t * 2.4; }
 
       if (C.sync) C.sync(C, t, idx);
+      delight.update(dt, t, locked ? null : em);
       const c = C.world.camAt(camW, camH);
       lookAtWorld(c.x, c.y, Math.min(1, dt * 4));
     },

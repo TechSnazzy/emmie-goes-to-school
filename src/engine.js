@@ -26,6 +26,7 @@ function press(a) { if (!held.has(a)) { held.add(a); edgeDown.add(a); } }
 function release(a) { held.delete(a); }
 
 window.addEventListener('keydown', (e) => {
+  if (e.target.closest?.('button, a, input, dialog')) return;
   if (e.repeat) return;
   const a = KEYMAP[e.code];
   if (a) { press(a); e.preventDefault(); }
@@ -53,7 +54,7 @@ function endFrameInput() {
   while (virtualHeld.length) release(virtualHeld.pop());
 }
 const viewEl = document.getElementById('view');
-if (viewEl) viewEl.addEventListener('pointerdown', () => virtualPress('act'));
+if (viewEl) viewEl.addEventListener('pointerdown', e => { if (e.target.tagName === 'CANVAS') virtualPress('act'); });
 
 // Touch uses tap-to-walk like the mouse, so the old d-pad is retired.
 export function initTouch() {

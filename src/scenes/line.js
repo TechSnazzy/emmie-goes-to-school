@@ -1,11 +1,9 @@
-// line.js — line up in the schoolyard. Where Emmie ends up in line depends
-// on her pace (beat her best time and she's nearer the front); the other
+// line.js — line up in the schoolyard. Friends make a place for Emmie; the other
 // kids fidget and shuffle until the teacher arrives, then everyone —
 // teacher, Emmie, and the whole line — walks together into the school.
 import { lerp } from '../engine.js';
 import { walkScene, createWorld, put, go, toast, M } from './_kit.js';
 import { sfx } from '../audio.js';
-import { state, PAR } from '../state.js';
 
 const YW = 760, YH = 400;
 const LINE = { x: 540, y: 180 };
@@ -32,10 +30,7 @@ export const line = walkScene({
         {
           label: 'get in line', objective: 'Get in line with your class!', x: LINE.x, y: LINE.y + 96, radius: 42, hold: 0.3, toast: 'You made it! 🎉',
           onDone: (c) => {
-            // pace vs. best time (or PAR, if there's no best yet) decides where she slots in
-            const ref = (state.best && state.best.time) || PAR;
-            const ratio = state.elapsed / ref;
-            c.slot = ratio < 0.92 ? 0 : ratio < 1.0 ? 1 : ratio < 1.08 ? 2 : ratio < 1.2 ? 3 : 4;
+            c.slot = 2; // Friends make a place for her, however long she explored.
             let s = 0;
             for (const k of c.lineKids) {
               if (s === c.slot) s++;

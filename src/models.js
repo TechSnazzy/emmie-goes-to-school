@@ -2,6 +2,7 @@
 // low-segment cylinders/cones so it reads as chunky flat-shaded 3D.
 // World coords map (x, y) -> (x, 0, y); +y in game space is +z in 3D.
 import { THREE } from './render3d.js';
+import { adventure, PACKS } from './adventure.js';
 
 export const C = {
   ink: '#3a2f45',
@@ -29,7 +30,10 @@ export const C = {
 const matCache = new Map();
 export function MAT(color, o = {}) {
   const key = color + JSON.stringify(o);
-  if (!matCache.has(key)) matCache.set(key, new THREE.MeshLambertMaterial({ color, ...o }));
+  if (!matCache.has(key)) {
+    const material = new THREE.MeshLambertMaterial({ color, ...o });
+    material.userData.shared = true; matCache.set(key, material);
+  }
   return matCache.get(key);
 }
 // A box whose BOTTOM sits at y.
@@ -136,11 +140,24 @@ export function makeAdult(i = 0) {
 }
 export function makeEmmie() {
   const g = makePerson(PAL.emmie, { kid: true });
-  const pack = box(13, 15, 6, C.purple, 0, 22, -7);
+  const pack = box(15, 17, 7, PACKS[adventure.pack].color, 0, 21, -7);
+  const pocket = box(11, 7, 2, PACKS[adventure.pack].light, 0, -5, -4.2);
+  pack.add(pocket);
+  const badge = box(3, 3, 1, '#fff0bc', 0, 0, -5.5); badge.rotation.z = Math.PI / 4; pack.add(badge);
+  const bow = group(box(5, 3, 2, PACKS[adventure.pack].color, -3, 0), box(5, 3, 2, PACKS[adventure.pack].color, 3, 0));
+  bow.position.set(6, 49, 0); bow.rotation.z = -0.2; g.add(bow);
   pack.name = 'backpack';
   g.add(pack);
   g.userData.pack = pack;
+  g.userData.pocket = pocket; g.userData.bow = bow;
   return g;
+}
+
+export function refreshBackpack(g) {
+  const {pack,pocket,bow} = g.userData;
+  if (pack) pack.material = MAT(PACKS[adventure.pack].color);
+  if (pocket) pocket.material = MAT(PACKS[adventure.pack].light);
+  if (bow) bow.children.forEach(m => { m.material = MAT(PACKS[adventure.pack].color); });
 }
 
 // ===================================================================
@@ -158,6 +175,7 @@ export function makeCat() {
   const tail = box(2.6, 12, 2.6, C.cat, 0, 8, -9);
   tail.rotation.x = -0.5; g.add(tail);
   g.userData.height = 20;
+  g.userData.tail = tail;
   return g;
 }
 export function makeSquirrel() {
@@ -181,6 +199,7 @@ export function makeDog() {
   g.add(box(3, 5, 1.6, C.dog, 4.4, 19, 12));
   for (const [dx, dz] of [[-4, 8], [4, 8], [-4, -7], [4, -7]]) g.add(box(3.4, 8, 3.4, C.dog, dx, 0, dz));
   const tail = box(2.6, 10, 2.6, C.dog, 0, 14, -11); tail.rotation.x = 0.7; g.add(tail);
+  g.userData.tail = tail;
   return g;
 }
 
@@ -374,10 +393,10 @@ export function makeCounter(w = 90) {
   g.add(box(w + 4, 4, 34, C.woodL, 0, 30, 0));
   return g;
 }
-export function makeBackpack(colour = C.purple) {
+export function makeBackpack(colour = PACKS[adventure.pack].color) {
   const g = new THREE.Group();
   g.add(box(18, 20, 10, colour, 0, 0, 0));
-  g.add(box(12, 6, 2, '#6746a0', 0, 4, 5.5));
+  g.add(box(12, 6, 2, PACKS[adventure.pack].light, 0, 4, 5.5));
   return g;
 }
 export function makeLunchbox(colour = C.coral) {
